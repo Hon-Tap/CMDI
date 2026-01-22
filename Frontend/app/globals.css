@@ -1,44 +1,7 @@
-/* app/globals.css */
+/* Frontend/app/globals.css */
 
 /* =========================
-   1) Reset + base
-========================= */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-  text-size-adjust: 100%;
-}
-
-body {
-  margin: 0;
-  overflow-x: hidden;
-  background: var(--c-bg);
-  color: var(--c-text);
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  line-height: 1.5;
-}
-
-/* Media defaults */
-img,
-svg,
-video,
-canvas {
-  display: block;
-  max-width: 100%;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* =========================
-   2) Global design tokens
+   1) Design tokens
 ========================= */
 :root {
   /* Brand */
@@ -76,10 +39,67 @@ a {
   --t: 260ms;
   --t-slow: 520ms;
 
-  --transition: transform var(--t) var(--spring), box-shadow var(--t) var(--ease),
-    background var(--t) var(--ease), border-color var(--t) var(--ease),
-    color var(--t) var(--ease), opacity var(--t) var(--ease),
+  --transition: transform var(--t) var(--spring),
+    box-shadow var(--t) var(--ease),
+    background var(--t) var(--ease),
+    border-color var(--t) var(--ease),
+    color var(--t) var(--ease),
+    opacity var(--t) var(--ease),
     filter var(--t) var(--ease);
+
+  color-scheme: light;
+}
+
+/* =========================
+   2) Reset + base
+========================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Nice default focus */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 12px;
 }
 
 /* Anchor offset for fixed navbar */
@@ -87,9 +107,17 @@ section {
   scroll-margin-top: calc(var(--nav-h) + 16px);
 }
 
+/* Small helpers used in layout.tsx */
+.appBody {
+  min-height: 100dvh;
+}
+
+.appMain {
+  min-height: 70vh;
+}
+
 /* =========================
    3) Skip link (CSS-only)
-   - No JS handlers needed
 ========================= */
 .skipLink {
   position: absolute;
@@ -108,8 +136,6 @@ section {
 
 .skipLink:focus {
   transform: translateY(0);
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 /* =========================
@@ -128,4 +154,11 @@ section {
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+}
+.appBody {
+  min-height: 100dvh;
+}
+
+.appMain {
+  min-height: 70vh;
 }

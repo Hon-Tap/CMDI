@@ -1,47 +1,58 @@
-// app/layout.tsx
+// Frontend/app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import "../styles/globals.css";
+import "./globals.css";
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
+const SITE_NAME = "CMDI";
+const SITE_URL = "https://cmdi-ss.org";
+const DEFAULT_TITLE = "CMDI | Empowering Children & Communities";
+const DESCRIPTION =
+  "Children’s Mission for Development Initiative (CMDI) is a child-focused NGO in South Sudan promoting education, protection, health, WASH, and community resilience.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+
   title: {
-    default: "CMDI | Empowering Children & Communities",
-    template: "%s | CMDI",
+    default: DEFAULT_TITLE,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Children’s Mission for Development Initiative (CMDI) is a child-focused NGO in South Sudan promoting education, protection, health, WASH, and community resilience.",
-  applicationName: "CMDI",
-  metadataBase: new URL("https://cmdi-ss.org"),
-  alternates: { canonical: "/" },
+
+  description: DESCRIPTION,
+  applicationName: SITE_NAME,
+
+  alternates: {
+    canonical: "/",
+  },
+
   openGraph: {
     type: "website",
-    siteName: "CMDI",
-    title: "CMDI | Empowering Children & Communities",
-    description:
-      "A child-focused NGO in South Sudan promoting education, protection, health, WASH, and community resilience.",
-    url: "https://cmdi-ss.org",
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
     images: [
       {
         url: "/images/branding/CMDI_Logo.jpeg",
         width: 1200,
         height: 630,
-        alt: "CMDI — Empowering Children & Communities",
+        alt: `${SITE_NAME} — Empowering Children & Communities`,
       },
     ],
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "CMDI | Empowering Children & Communities",
-    description:
-      "A child-focused NGO in South Sudan promoting education, protection, health, WASH, and community resilience.",
+    title: DEFAULT_TITLE,
+    description: DESCRIPTION,
     images: ["/images/branding/CMDI_Logo.jpeg"],
   },
+
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: [{ url: "/favicon.ico" }],
+    shortcut: [{ url: "/favicon.ico" }],
+    apple: [{ url: "/apple-touch-icon.png" }],
   },
 };
 
@@ -51,18 +62,22 @@ export const viewport: Viewport = {
   themeColor: "#00aeef",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <body>
-        {/* Skip link (CSS-only; safe in Server Component) */}
-        {/* <a href="#main" className="skipLink">
+    <html lang="en" suppressHydrationWarning>
+      <body className="appBody">
+        {/* Accessible skip link */}
+        <a href="#main" className="skipLink">
           Skip to content
         </a>
- */}
+
         <Navbar />
 
-        <main id="main" style={{ minHeight: "70vh" }}>
+        <main id="main" className="appMain" role="main">
           {children}
         </main>
 
