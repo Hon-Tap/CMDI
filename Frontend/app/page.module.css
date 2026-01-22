@@ -1,0 +1,1095 @@
+/* Frontend/app/page.module.css */
+/* MODULE SAFE: no *, html, body, :root, section, composes */
+
+/* =========================================================
+   1) PAGE WRAPPER + LAYOUT
+   ========================================================= */
+.page {
+  background: transparent;
+}
+
+/* Use same container rhythm as navbar */
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.section {
+  padding: 5.5rem 0;
+}
+
+.sectionSoft {
+  padding: 5.5rem 0;
+  background: var(--c-bg-soft);
+}
+
+.sectionTight {
+  padding: 4rem 0;
+}
+
+/* =========================================================
+   2) MOTION (SMOOTHER + CONSISTENT)
+   ========================================================= */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes fadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes fadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes softPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.reveal {
+  animation: fadeUp 720ms var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .heroBg,
+  .heroGlow,
+  .partnerLogo,
+  .skeletonLine,
+  .skeletonIcon {
+    animation: none !important;
+  }
+
+  .btnPrimary,
+  .btnOutline,
+  .btnSoft,
+  .moreBtn,
+  .programCard,
+  .projectOverlayCard,
+  .projectImg,
+  .projectArrow,
+  .aboutImg {
+    transition: none !important;
+  }
+}
+
+/* =========================================================
+   3) HERO (NAVBAR-COMPATIBLE + CLEAN)
+   - Important: provide breathing room under fixed navbar
+   ========================================================= */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  padding-top: clamp(96px, 11vh, 140px); /* plays nice with navbar shrink */
+  padding-bottom: 4.75rem;
+
+  display: flex;
+  align-items: center;
+
+  overflow: hidden;
+  color: #fff;
+  isolation: isolate;
+}
+
+/* background image layer */
+.heroBg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  background-size: cover;
+  background-position: center;
+
+  transform: scale(1.04);
+  filter: saturate(1.03) contrast(1.03);
+  animation: heroZoom 14s var(--ease) forwards;
+}
+
+@keyframes heroZoom {
+  to {
+    transform: scale(1);
+  }
+}
+
+/* dark overlay to ensure readability */
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  background: linear-gradient(
+    90deg,
+    rgba(2, 6, 23, 0.92) 0%,
+    rgba(2, 6, 23, 0.68) 55%,
+    rgba(2, 6, 23, 0.16) 100%
+  );
+}
+
+/* subtle glow gradient accents */
+.heroGlow {
+  position: absolute;
+  inset: -220px;
+  z-index: 2;
+  pointer-events: none;
+
+  background:
+    radial-gradient(900px 520px at 18% 28%, rgba(0, 174, 239, 0.22), transparent 60%),
+    radial-gradient(900px 520px at 84% 26%, rgba(245, 158, 11, 0.14), transparent 55%);
+  animation: glowDrift 10s var(--ease) infinite;
+}
+
+@keyframes glowDrift {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+  100% { transform: translateY(0); }
+}
+
+/* content layer */
+.heroContainer {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.heroContent {
+  max-width: 780px;
+}
+
+/* small badge */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.48rem 0.95rem;
+  border-radius: 999px;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  color: rgba(0, 174, 239, 0.95);
+
+  animation: fadeUp 720ms var(--ease) both;
+}
+
+.heroTitle {
+  margin: 1.15rem 0 1.05rem;
+  font-size: clamp(2.35rem, 5.2vw, 4.9rem);
+  line-height: 1.04;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+
+  animation: fadeUp 780ms var(--ease) both;
+  animation-delay: 80ms;
+}
+
+.highlight {
+  color: transparent;
+  background: linear-gradient(90deg, #00aeef, #60a5fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.heroLead {
+  font-size: 1.12rem;
+  line-height: 1.78;
+  color: rgba(226, 232, 240, 0.92);
+  max-width: 62ch;
+
+  margin: 0 0 2.1rem;
+
+  animation: fadeUp 820ms var(--ease) both;
+  animation-delay: 140ms;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+
+  animation: fadeUp 860ms var(--ease) both;
+  animation-delay: 200ms;
+}
+
+/* =========================================================
+   4) BUTTON SYSTEM (MATCH NAVBAR FEEL)
+   ========================================================= */
+.btnPrimary,
+.btnOutline,
+.btnSoft,
+.moreBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+
+  padding: 0.92rem 1.4rem;
+  border-radius: 999px;
+
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+
+  cursor: pointer;
+  transition: var(--transition);
+  will-change: transform;
+  white-space: nowrap;
+}
+
+/* primary */
+.btnPrimary {
+  background: linear-gradient(135deg, var(--c-primary), var(--c-secondary));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 46px rgba(0, 174, 239, 0.22);
+  overflow: hidden;
+}
+
+.btnPrimary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.24) 40%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  transition: transform 560ms var(--ease);
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 68px rgba(0, 174, 239, 0.30);
+}
+
+.btnPrimary:hover::after {
+  transform: translateX(120%);
+}
+
+/* outline (hero glass) */
+.btnOutline {
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.btnOutline:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.42);
+}
+
+/* soft */
+.btnSoft {
+  color: var(--c-secondary);
+  background: rgba(0, 174, 239, 0.10);
+  border: 1px solid rgba(0, 174, 239, 0.24);
+}
+
+.btnSoft:hover {
+  transform: translateY(-2px);
+  background: rgba(0, 174, 239, 0.14);
+  border-color: rgba(0, 174, 239, 0.34);
+}
+
+.btnPrimary:focus-visible,
+.btnOutline:focus-visible,
+.btnSoft:focus-visible,
+.moreBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* section more button */
+.moreBtn {
+  margin-top: 2.2rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--c-secondary);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: var(--shadow-sm);
+}
+
+.moreBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(0, 174, 239, 0.22);
+}
+
+/* =========================================================
+   5) PARTNERS MARQUEE
+   ========================================================= */
+.partnerSection {
+  background: var(--c-bg);
+  padding: 2.9rem 0;
+
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.marqueeTrack {
+  display: flex;
+  gap: 4rem;
+  width: max-content;
+  animation: marquee 26s linear infinite;
+}
+
+.marqueeTrack:hover {
+  animation-play-state: paused;
+}
+
+.partnerLogo {
+  opacity: 0.6;
+  filter: grayscale(100%);
+  transition:
+    opacity var(--t-fast) var(--ease),
+    filter var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.partnerLogo:hover {
+  opacity: 1;
+  filter: grayscale(0%);
+  transform: translateY(-1px);
+}
+
+.partnerPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 150px;
+  height: 46px;
+  padding: 0 16px;
+
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+
+  color: rgba(15, 23, 42, 0.72);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* =========================================================
+   6) SECTION HEADERS
+   ========================================================= */
+.sectionHeader {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 3.3rem;
+}
+
+.sectionTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  padding: 0.38rem 0.86rem;
+  border-radius: 999px;
+
+  background: rgba(0, 174, 239, 0.10);
+  border: 1px solid rgba(0, 174, 239, 0.20);
+
+  color: var(--c-primary-dark);
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+
+  margin-bottom: 0.9rem;
+}
+
+.sectionTitle {
+  font-size: clamp(2rem, 3.1vw, 3.1rem);
+  font-weight: 950;
+  color: var(--c-secondary);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
+}
+
+.sectionLead {
+  color: var(--c-muted);
+  line-height: 1.78;
+  margin: 0;
+}
+
+/* =========================================================
+   7) ABOUT
+   ========================================================= */
+.aboutSection {
+  padding: 6rem 0;
+  background: var(--c-bg);
+}
+
+.aboutGrid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.aboutImageWrapper {
+  position: relative;
+  height: 520px;
+  border-radius: 28px;
+  overflow: hidden;
+
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-md);
+
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.aboutImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 900ms var(--ease), filter 900ms var(--ease);
+}
+
+.aboutImageWrapper:hover .aboutImg {
+  transform: scale(1.05);
+  filter: saturate(1.06);
+}
+
+.imageDecoration {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(800px 400px at 20% 20%, rgba(0, 174, 239, 0.12), transparent 55%);
+  pointer-events: none;
+}
+
+.aboutText {
+  max-width: 60ch;
+}
+
+.aboutHeading {
+  font-size: clamp(2rem, 3.1vw, 3.1rem);
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  color: var(--c-text);
+  margin: 0 0 1rem;
+  line-height: 1.15;
+}
+
+.aboutParagraph {
+  color: var(--c-muted);
+  line-height: 1.85;
+  margin: 0 0 1.4rem;
+}
+
+/* =========================================================
+   8) PROGRAMS
+   ========================================================= */
+.programsSection {
+  background: var(--c-bg-soft);
+  padding: 6rem 0;
+}
+
+.programGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.8rem;
+}
+
+.programCard {
+  position: relative;
+  overflow: hidden;
+
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+
+  padding: 2.15rem 1.85rem;
+
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+  transition: var(--transition);
+}
+
+.programCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+
+  background: linear-gradient(90deg, transparent, rgba(0, 174, 239, 0.7), transparent);
+  opacity: 0;
+
+  transition: opacity var(--t) var(--ease);
+}
+
+.programCard:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(0, 174, 239, 0.22);
+}
+
+.programCard:hover::before {
+  opacity: 1;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.progIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 174, 239, 0.08);
+  border: 1px solid rgba(0, 174, 239, 0.18);
+  color: var(--c-primary);
+
+  transition:
+    transform 420ms var(--spring),
+    background var(--t) var(--ease),
+    color var(--t) var(--ease),
+    border-color var(--t) var(--ease);
+}
+
+.programCard:hover .progIcon {
+  transform: rotate(8deg) scale(1.06);
+  background: var(--c-primary);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.cornerDecor {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.10);
+  margin-top: 6px;
+}
+
+.programCard h3 {
+  margin: 0 0 0.7rem;
+  font-size: 1.28rem;
+  font-weight: 950;
+  color: var(--c-secondary);
+  letter-spacing: -0.01em;
+}
+
+.programCard p {
+  margin: 0 0 1.25rem;
+  color: var(--c-muted);
+  line-height: 1.75;
+}
+
+.cardAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 950;
+  color: var(--c-primary-dark);
+  transition: gap var(--t) var(--ease), transform var(--t) var(--ease);
+}
+
+.programCard:hover .cardAction {
+  gap: 0.9rem;
+  transform: translateX(2px);
+}
+
+/* =========================================================
+   9) PROJECTS
+   ========================================================= */
+.projectsSection {
+  background: var(--c-bg);
+  padding: 6rem 0;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.2rem;
+  margin-bottom: 2.6rem;
+}
+
+.headerRowLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.viewAllLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 950;
+  color: var(--c-primary-dark);
+  transition: transform var(--t) var(--ease), opacity var(--t) var(--ease);
+}
+
+.viewAllLink:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2.6rem;
+}
+
+.projectCardWrapper {
+  position: relative;
+  height: 450px;
+  cursor: pointer;
+}
+
+.projectImgBox {
+  width: 96%;
+  height: 84%;
+  border-radius: 24px;
+  overflow: hidden;
+
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.10);
+  position: relative;
+
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.projectImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 900ms var(--ease), filter 900ms var(--ease);
+}
+
+.imgOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(2, 6, 23, 0.25) 100%);
+  pointer-events: none;
+}
+
+.projectCardWrapper:hover .projectImg {
+  transform: scale(1.08);
+  filter: saturate(1.06);
+}
+
+.projectOverlayCard {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 86%;
+
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  padding: 1.55rem;
+  border-radius: 20px;
+  box-shadow: 0 22px 60px rgba(2, 6, 23, 0.14);
+
+  transition: var(--transition);
+}
+
+.projectCardWrapper:hover .projectOverlayCard {
+  transform: translateY(-8px);
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.18);
+}
+
+.projectCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: var(--c-primary-dark);
+  margin-bottom: 0.55rem;
+}
+
+.projectOverlayCard h4 {
+  margin: 0 0 0.55rem;
+  font-size: 1.18rem;
+  font-weight: 950;
+  color: var(--c-secondary);
+  letter-spacing: -0.01em;
+}
+
+.projectOverlayCard p {
+  margin: 0;
+  color: var(--c-muted);
+  line-height: 1.65;
+}
+
+.projectArrow {
+  position: absolute;
+  bottom: 0.35rem;
+  right: 1rem;
+
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: var(--c-secondary);
+
+  transition: var(--transition);
+}
+
+.projectCardWrapper:hover .projectArrow {
+  background: var(--c-primary);
+  border-color: rgba(0, 174, 239, 0.22);
+  color: #ffffff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+/* =========================================================
+   10) CTA (LIGHT + NAVBAR-ALIGNED)
+   ========================================================= */
+.ctaSection {
+  position: relative;
+  overflow: hidden;
+  padding: 6.5rem 2rem;
+  text-align: center;
+  color: var(--c-text);
+
+  background:
+    radial-gradient(1100px 520px at 18% 18%, rgba(0, 174, 239, 0.18), transparent 60%),
+    radial-gradient(900px 520px at 85% 35%, rgba(245, 158, 11, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(255, 255, 255, 1));
+}
+
+.ctaContent {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.ctaTitle {
+  font-size: clamp(2.1rem, 4vw, 3.4rem);
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  margin: 0 0 1rem;
+  color: var(--c-secondary);
+}
+
+.ctaText {
+  font-size: 1.12rem;
+  line-height: 1.72;
+  margin: 0 0 2rem;
+  color: var(--c-muted);
+}
+
+.ctaActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9rem;
+}
+
+/* CTA buttons */
+.ctaPrimaryBtn,
+.ctaSecondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+
+  padding: 0.95rem 1.6rem;
+  border-radius: 999px;
+
+  font-weight: 900;
+  text-decoration: none;
+  transition: var(--transition);
+  will-change: transform;
+  white-space: nowrap;
+}
+
+/* Primary = solid */
+.ctaPrimaryBtn {
+  background: linear-gradient(135deg, var(--c-primary), var(--c-secondary));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 16px 44px rgba(0, 174, 239, 0.24);
+  position: relative;
+  overflow: hidden;
+}
+
+.ctaPrimaryBtn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 40%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  transition: transform 560ms var(--ease);
+}
+
+.ctaPrimaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 70px rgba(0, 174, 239, 0.32);
+}
+
+.ctaPrimaryBtn:hover::after {
+  transform: translateX(120%);
+}
+
+/* Secondary = soft outline (blue) */
+.ctaSecondaryBtn {
+  background: rgba(0, 174, 239, 0.10);
+  color: var(--c-secondary);
+  border: 1px solid rgba(0, 174, 239, 0.35);
+  box-shadow: 0 10px 22px rgba(2, 132, 199, 0.10);
+}
+
+.ctaSecondaryBtn:hover {
+  transform: translateY(-2px);
+  background: rgba(0, 174, 239, 0.16);
+  border-color: rgba(0, 174, 239, 0.55);
+  box-shadow: 0 14px 40px rgba(0, 174, 239, 0.16);
+}
+
+.ctaPrimaryBtn:focus-visible,
+.ctaSecondaryBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* decorative rings */
+.ctaSection::before,
+.ctaSection::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.ctaSection::before {
+  width: 720px;
+  height: 720px;
+  left: -260px;
+  top: -320px;
+  animation: ringFloat 14s var(--ease) infinite;
+}
+
+.ctaSection::after {
+  width: 520px;
+  height: 520px;
+  right: -220px;
+  bottom: -260px;
+  animation: ringFloat 18s var(--ease) infinite reverse;
+}
+
+@keyframes ringFloat {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(12px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* =========================================================
+   11) SKELETON LOADING
+   ========================================================= */
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.8rem;
+}
+
+.skeletonCard {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  padding: 2.2rem 1.85rem;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+}
+
+.skeletonIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.1rem;
+  animation: shimmer 1.2s var(--ease) infinite;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  margin-top: 0.75rem;
+  animation: shimmer 1.2s var(--ease) infinite;
+}
+
+.skeletonLineShort { width: 55%; }
+.skeletonLineMed { width: 80%; }
+
+@keyframes shimmer {
+  0% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+  100% { opacity: 0.55; }
+}
+
+/* =========================================================
+   12) RESPONSIVE
+   ========================================================= */
+@media (max-width: 960px) {
+  .container {
+    padding: 0 1.25rem;
+  }
+
+  .hero {
+    min-height: 92vh;
+    padding-bottom: 4.25rem;
+  }
+
+  .heroContainer {
+    padding: 0 1.25rem;
+  }
+
+  .aboutGrid {
+    grid-template-columns: 1fr;
+    gap: 2.4rem;
+  }
+
+  .aboutImageWrapper {
+    height: 420px;
+    order: -1;
+  }
+
+  .headerRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .projectGrid {
+    grid-template-columns: 1fr;
+    gap: 2.2rem;
+  }
+
+  .projectOverlayCard {
+    width: 92%;
+    right: 4%;
+    bottom: -18px;
+  }
+
+  .projectCardWrapper {
+    height: 420px;
+    margin-bottom: 2.4rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .heroActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btnPrimary,
+  .btnOutline,
+  .btnSoft,
+  .moreBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ctaActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ctaPrimaryBtn,
+  .ctaSecondaryBtn {
+    width: 100%;
+  }
+
+  .partnerPlaceholder {
+    min-width: 120px;
+  }
+}

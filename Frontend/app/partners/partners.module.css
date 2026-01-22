@@ -1,0 +1,315 @@
+/* =========================================================
+   PARTNERS PAGE — MODERN NGO UI (FINAL)
+   CSS MODULE SAFE • NAVBAR + HOME ALIGNED
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   0) LOCAL TOKENS (SCOPED TO PAGE)
+--------------------------------------------------------- */
+.page {
+  --bg: #ffffff;
+  --bg-soft: #f8fafc;
+  --bg-glass: rgba(255, 255, 255, 0.92);
+
+  --text-main: #0f172a;
+  --text-soft: #334155;
+  --text-muted: #64748b;
+
+  --primary: #00aeef;
+  --secondary: #1e3a8a;
+  --accent: #f59e0b;
+
+  --border-soft: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.14);
+
+  --radius-sm: 14px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+
+  --shadow-sm: 0 10px 30px rgba(2, 6, 23, 0.06);
+  --shadow-md: 0 24px 60px rgba(2, 6, 23, 0.12);
+  --shadow-lg: 0 40px 100px rgba(2, 6, 23, 0.18);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  background: var(--bg);
+  color: var(--text-main);
+  overflow-x: clip;
+}
+
+/* ---------------------------------------------------------
+   1) HERO — NAVBAR FRIENDLY
+--------------------------------------------------------- */
+.hero {
+  position: relative;
+  min-height: clamp(520px, 70vh, 760px);
+  padding-top: clamp(96px, 12vh, 140px);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #fff;
+
+  background: url("/images/partners/project-wash.jpeg") center / cover no-repeat;
+  isolation: isolate;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(2, 6, 23, 0.90) 0%,
+      rgba(2, 6, 23, 0.65) 55%,
+      rgba(2, 6, 23, 0.25) 100%
+    );
+  z-index: 0;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  padding: 0 1.5rem;
+}
+
+.heroEyebrow {
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.heroTitle {
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-bottom: 1rem;
+}
+
+.heroSubtitle {
+  font-size: 1.15rem;
+  line-height: 1.75;
+  color: rgba(226, 232, 240, 0.92);
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------
+   2) SECTION WRAPPER
+--------------------------------------------------------- */
+.section {
+  padding: clamp(5rem, 7vw, 8rem) 0;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.sectionHeader {
+  max-width: 760px;
+  margin: 0 auto 3.5rem;
+  text-align: center;
+}
+
+.sectionTag {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(0, 174, 239, 0.12);
+  border: 1px solid rgba(0, 174, 239, 0.25);
+  color: var(--secondary);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.9rem;
+}
+
+.sectionTitle {
+  font-size: clamp(2rem, 3vw, 2.9rem);
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.8rem;
+}
+
+.sectionText {
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+
+/* ---------------------------------------------------------
+   3) FEATURED PARTNER (THON MEN)
+--------------------------------------------------------- */
+.featuredPartner {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 3rem;
+  align-items: center;
+
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  padding: 3.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.partnerLogo {
+  width: 400px;
+  height: 400px;
+  border-radius: 28px;
+  object-fit: contain;
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.partnerName {
+  font-size: 2rem;
+  font-weight: 950;
+  margin-bottom: 0.6rem;
+}
+
+.partnerDescription {
+  color: var(--text-soft);
+  line-height: 1.8;
+  margin-bottom: 1.8rem;
+}
+
+/* Cluster Pills */
+.clusterList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.clusterTag {
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(0, 174, 239, 0.10);
+  border: 1px solid rgba(0, 174, 239, 0.28);
+  color: var(--secondary);
+}
+
+/* ---------------------------------------------------------
+   4) OTHER PARTNERS GRID
+--------------------------------------------------------- */
+.partnerGrid {
+  margin-top: 4.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+}
+
+.partnerCard {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 2.4rem 2rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+
+.partnerCard:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-md);
+}
+
+.partnerCard h4 {
+  font-size: 1.25rem;
+  font-weight: 900;
+  margin-top: 1rem;
+}
+
+.partnerCard p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+/* ---------------------------------------------------------
+   5) CTA — STRATEGIC & CALM
+--------------------------------------------------------- */
+.partnerCTA {
+  margin-top: 6rem;
+  padding: clamp(4rem, 6vw, 6.5rem) 2rem;
+  border-radius: var(--radius-xl);
+  text-align: center;
+
+  background:
+    radial-gradient(900px 520px at 20% 20%, rgba(0, 174, 239, 0.25), transparent 60%),
+    linear-gradient(135deg, var(--secondary), var(--primary));
+
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+}
+
+.partnerCTA h3 {
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 950;
+  margin-bottom: 1rem;
+}
+
+.partnerCTA p {
+  max-width: 700px;
+  margin: 0 auto 2.2rem;
+  color: rgba(226, 232, 240, 0.92);
+  line-height: 1.7;
+}
+
+.ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 2rem;
+  border-radius: 999px;
+  font-weight: 900;
+  text-decoration: none;
+  color: var(--secondary);
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.22);
+
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.ctaBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 65px rgba(2, 6, 23, 0.30);
+}
+
+/* ---------------------------------------------------------
+   6) RESPONSIVE
+--------------------------------------------------------- */
+@media (max-width: 960px) {
+  .featuredPartner {
+    grid-template-columns: 1fr;
+    padding: 2.5rem;
+  }
+  .partnerLogo {
+    width: 200px;
+    height: 200px;
+    padding: 0.5rem;
+    /* margin-left: -20px; */
+  }
+}
+
+
+@media (max-width: 520px) {
+  .container {
+    padding: 0 1.25rem;
+  }
+}

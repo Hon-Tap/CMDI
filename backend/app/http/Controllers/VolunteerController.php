@@ -1,28 +1,33 @@
 <?php
-// backend/app/http/Controllers/VolunteerController.php
-
 declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
 use App\Models\Volunteer;
 
-class VolunteerController
-{
-    public function index(): void
-    {
-        $this->json(true, 'Volunteers fetched', Volunteer::all());
+class VolunteerController {
+    
+    public function index(): void {
+        // Using your Model pattern
+        $volunteers = Volunteer::all(); 
+        json(['success' => true, 'data' => $volunteers]);
     }
 
-    public function store(): void
-    {
+    public function store(): void {
         $data = json_decode(file_get_contents('php://input'), true);
-        $this->json(true, 'Volunteer registered', Volunteer::create($data));
-    }
 
-    private function json(bool $success, string $message, $data = null): void
-    {
-        echo json_encode(compact('success', 'message', 'data'));
-        exit;
+        if (empty($data['email']) || empty($data['firstName'])) {
+            json(['success' => false, 'message' => 'Required fields missing'], 400);
+        }
+
+        $result = Volunteer::create([
+            'first_name'    => $data['firstName'],
+            'last_name'     => $data['lastName'],
+            'email'         => $data['email'],
+            'primary_skill' => $data['skill'],
+            'reason'        => $data['reason']
+        ]);
+
+        json(['success' => true, 'message' => 'Volunteer registered', 'data' => $result]);
     }
 }

@@ -1,0 +1,400 @@
+/* Footer.module.css */
+
+/* =========================================
+   1. TOKENS (local, safe + modular)
+   ========================================= */
+.footer {
+  --c-bg: #0f172a;         /* slate-900 */
+  --c-bg-2: #020617;       /* slate-950 */
+  --c-text: #f8fafc;       /* slate-50 */
+  --c-muted: #94a3b8;      /* slate-400 */
+  --c-dim: #64748b;        /* slate-500 */
+  --c-accent: #00aeef;     /* cyan */
+  --c-accent-2: #1e3a8a;   /* deep blue */
+
+  --border: rgba(255, 255, 255, 0.08);
+  --card: rgba(255, 255, 255, 0.04);
+  --card-2: rgba(255, 255, 255, 0.06);
+  --shadow: 0 14px 50px rgba(0, 0, 0, 0.22);
+
+  --radius-xl: 22px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+
+  --trans: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =========================================
+   2. FOOTER WRAP
+   ========================================= */
+.footer {
+  position: relative;
+  background: radial-gradient(1200px 600px at 18% 0%,
+      rgba(0, 174, 239, 0.12),
+      transparent 55%),
+    radial-gradient(900px 500px at 80% 30%,
+      rgba(30, 58, 138, 0.18),
+      transparent 55%),
+    var(--c-bg);
+
+  color: var(--c-text);
+  padding-top: 5.5rem;
+  border-top: 1px solid var(--border);
+  overflow: clip; /* keeps glow effects from stretching layout */
+}
+
+/* =========================================
+   3. MAIN GRID
+   ========================================= */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+
+  display: grid;
+  grid-template-columns: 1.4fr 2fr 1.6fr;
+  gap: 3.5rem;
+}
+
+/* =========================================
+   4. BRAND COLUMN
+   ========================================= */
+.brandCol {
+  min-width: 0;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--c-text);
+  text-decoration: none;
+  user-select: none;
+
+  margin-bottom: 1.25rem;
+}
+
+.logoMark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(0, 174, 239, 0.25), rgba(30, 58, 138, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 174, 239, 0.12);
+}
+
+.logoIcon {
+  color: var(--c-accent);
+}
+
+.missionText {
+  color: var(--c-muted);
+  line-height: 1.8;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  max-width: 42ch;
+}
+
+.socialLinks {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.socialLinks a {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+
+  color: var(--c-dim);
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  text-decoration: none;
+
+  transition: transform 0.18s var(--trans), color 0.18s var(--trans),
+    background 0.18s var(--trans), border-color 0.18s var(--trans);
+}
+
+.socialLinks a:hover {
+  transform: translateY(-2px);
+  color: var(--c-text);
+  background: rgba(0, 174, 239, 0.12);
+  border-color: rgba(0, 174, 239, 0.25);
+}
+
+/* =========================================
+   5. LINKS GRID
+   ========================================= */
+.linksGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  min-width: 0;
+}
+
+.linkGroup h4,
+.contactCol h4 {
+  color: var(--c-text);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 1.25rem;
+  font-weight: 800;
+}
+
+.linkGroup ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.linkGroup a {
+  color: var(--c-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  transition: color 0.18s var(--trans), transform 0.18s var(--trans);
+}
+
+.linkGroup a:hover {
+  color: var(--c-text);
+  transform: translateX(2px);
+}
+
+/* subtle arrow on hover (optional, no extra markup) */
+.linkGroup a::after {
+  content: "→";
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.18s var(--trans), transform 0.18s var(--trans);
+  color: rgba(0, 174, 239, 0.9);
+}
+
+.linkGroup a:hover::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* =========================================
+   6. CONTACT / NEWSLETTER CARD
+   ========================================= */
+.contactCol {
+  min-width: 0;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--card), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.cardNote {
+  color: var(--c-muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  margin: -0.25rem 0 1rem;
+}
+
+.newsletter {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border-radius: var(--radius-lg);
+
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.newsletter input {
+  background: transparent;
+  border: none;
+  padding: 0.75rem 0.9rem;
+  color: var(--c-text);
+  width: 100%;
+  outline: none;
+  font-size: 0.95rem;
+}
+
+.newsletter input::placeholder {
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.newsletter button {
+  background: linear-gradient(135deg, var(--c-accent) 0%, var(--c-accent-2) 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 0.18s var(--trans), filter 0.18s var(--trans);
+  white-space: nowrap;
+}
+
+.newsletter button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.newsletter button:active {
+  transform: translateY(0);
+}
+
+.contactInfo {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.contactItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: var(--c-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.contactIcon {
+  color: var(--c-accent);
+  margin-top: 2px;
+}
+
+.contactItem a {
+  color: var(--c-muted);
+  text-decoration: none;
+  transition: color 0.18s var(--trans);
+}
+
+.contactItem a:hover {
+  color: var(--c-text);
+}
+
+/* =========================================
+   7. DIVIDER
+   ========================================= */
+.divider {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.dividerLine {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+}
+
+/* =========================================
+   8. BOTTOM BAR
+   ========================================= */
+.bottomBar {
+  background: var(--c-bg-2);
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 0;
+}
+
+.bottomContainer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+
+  color: var(--c-dim);
+  font-size: 0.88rem;
+}
+
+.legalLinks {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.legalLinks a {
+  color: var(--c-dim);
+  text-decoration: none;
+  transition: color 0.18s var(--trans);
+}
+
+.legalLinks a:hover {
+  color: var(--c-text);
+}
+
+/* =========================================
+   9. RESPONSIVE
+   ========================================= */
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+  }
+
+  .contactCol {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer {
+    padding-top: 4.5rem;
+  }
+
+  .container {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+    padding: 0 1.25rem 3.5rem;
+  }
+
+  .linksGrid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .contactCol {
+    grid-column: span 1;
+  }
+
+  .bottomContainer {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .divider {
+    padding: 0 1.25rem;
+  }
+}
+
+/* =========================================
+   10. REDUCED MOTION
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  .socialLinks a,
+  .linkGroup a,
+  .newsletter button {
+    transition: none !important;
+  }
+
+  .socialLinks a:hover,
+  .linkGroup a:hover,
+  .newsletter button:hover {
+    transform: none !important;
+  }
+}

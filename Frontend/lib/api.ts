@@ -1,7 +1,14 @@
-import { Pool } from 'pg';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+export async function getProjects() {
+  const res = await fetch(`${API_BASE}/api/projects`, {
+    cache: 'no-store',
+  });
 
-export const query = (text: string, params?: any[]) => pool.query(text, params);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch projects: ${res.status}`);
+  }
+
+  return res.json();
+}

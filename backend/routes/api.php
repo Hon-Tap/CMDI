@@ -1,128 +1,87 @@
 <?php
 declare(strict_types=1);
 
-use App\Http\Controllers\AuthController;
+namespace App;
+
+// 1. Import all necessary controllers
 use App\Http\Controllers\NewsController;
+use App\Http\Controllers\VolunteerController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\VolunteerController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\PartnerController;
 
 /*
 |--------------------------------------------------------------------------
-| JSON Response Helper
-|--------------------------------------------------------------------------
-*/
-if (!function_exists('json')) {
-    function json(mixed $data, int $status = 200): void
-    {
-        http_response_code($status);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| Request Context
+| Request Normalization
 |--------------------------------------------------------------------------
 */
 $method = $_SERVER['REQUEST_METHOD'];
-$uri    = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
+$path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$uri    = ($path !== '/') ? rtrim($path, '/') : '/';
 
 /*
 |--------------------------------------------------------------------------
-| Routes
+| Route Definitions
 |--------------------------------------------------------------------------
 */
 $routes = [
-
-    // ─────────────────────────────────────────────
-    // Health
-    // ─────────────────────────────────────────────
-    ['GET', '/api/health', fn () => json([
-        'status' => 'ok',
-        'time'   => date('c'),
-        'env'    => $_ENV['APP_ENV'] ?? 'unknown'
-    ])],
-
-    // ─────────────────────────────────────────────
-    // Auth
-    // ─────────────────────────────────────────────
-    ['POST', '/api/auth/login', [AuthController::class, 'login']],
-
-    // ─────────────────────────────────────────────
-    // News
-    // ─────────────────────────────────────────────
-    ['GET',  '/api/news',  [NewsController::class, 'index']],
-    ['POST', '/api/news',  [NewsController::class, 'store']],
-
-    // ─────────────────────────────────────────────
-    // Programs
-    // ─────────────────────────────────────────────
-    ['GET',  '/api/programs', [ProgramController::class, 'index']],
-    ['POST', '/api/programs', [ProgramController::class, 'store']],
-
-    // ─────────────────────────────────────────────
-    // Projects
-    // ─────────────────────────────────────────────
-    ['GET',    '/api/projects',        [ProjectController::class, 'index']],
-    ['GET',    '/api/projects/show',   [ProjectController::class, 'show']],
-    ['POST',   '/api/projects',        [ProjectController::class, 'store']],
-    ['PUT',    '/api/projects',        [ProjectController::class, 'update']],
-    ['DELETE', '/api/projects',        [ProjectController::class, 'destroy']],
-
-    // ─────────────────────────────────────────────
-    // Volunteers
-    // ─────────────────────────────────────────────
-    ['POST', '/api/volunteers', [VolunteerController::class, 'store']],
+    'GET' => [
+        '/api/health'     => fn() => json(['status' => 'ok', 'time' => date('c')]),
+        '/api/news'       => [NewsController::class, 'index'],
+        '/api/volunteers' => [VolunteerController::class, 'index'],
+        '/api/programs'   => [ProgramController::class, 'index'],
+        '/api/projects'   => [ProjectController::class, 'index'],
+    ],
+    
+    'POST' => [
+        // Auth
+        '/api/auth/login'    => [AuthController::class, 'login'],
+        '/api/auth/register' => [AuthController::class, 'register'],
+        
+        // Form Submissions
+        '/api/news'          => [NewsController::class, 'store'],
+        '/api/volunteers'    => [VolunteerController::class, 'store'],
+        '/api/contact'       => [ContactController::class, 'store'],
+        '/api/partners'      => [PartnerController::class, 'store'], // New Partner Endpoint
+    ]
 ];
 
 /*
 |--------------------------------------------------------------------------
-| Dispatcher
+| Dispatcher (The "Engine")
 |--------------------------------------------------------------------------
 */
-foreach ($routes as [$httpMethod, $path, $handler]) {
-    if ($method !== $httpMethod) {
-        continue;
-    }
+if (isset($routes[$method][$uri])) {
+    $handler = $routes[$method][$uri];
 
-    if ($uri !== $path) {
-        continue;
-    }
-
-    // Closure route
     if (is_callable($handler)) {
         $handler();
+        exit;
     }
 
-    // Controller route
     if (is_array($handler)) {
         [$class, $action] = $handler;
-
-        if (!class_exists($class)) {
-            json(['error' => 'Controller not found'], 500);
+        
+        if (class_exists($class)) {
+            $controller = new $class();
+            if (method_exists($controller, $action)) {
+                $controller->{$action}();
+                exit;
+            } else {
+                json(['error' => "Method '$action' not found in $class"], 500);
+            }
+        } else {
+            json(['error' => "Controller class '$class' not found"], 500);
         }
-
-        if (!method_exists($class, $action)) {
-            json(['error' => 'Action not found'], 500);
-        }
-
-        (new $class())->{$action}();
     }
-
-    exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Fallback – No route matched
-|--------------------------------------------------------------------------
-*/
 json([
-    'status'  => 'error',
-    'message' => 'Endpoint not found',
-    'path'    => $uri,
-    'method'  => $method
+    'error' => 'Endpoint not found',
+    'debug' => [
+        'requested_method' => $method,
+        'requested_uri'    => $uri
+    ]
 ], 404);

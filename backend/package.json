@@ -1,0 +1,17 @@
+{
+  "name": "cmdi-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CMDI PHP API backend",
+  "type": "commonjs",
+  "scripts": {
+    "serve": "php -S localhost:8000 -t public",
+    "lint": "echo \"No linter configured\""
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.16.0"
+  }
+}
