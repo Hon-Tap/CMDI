@@ -2,8 +2,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+
 
 const SITE_NAME = "CMDI";
 const SITE_URL = "https://cmdi-ss.org";

@@ -9,7 +9,7 @@
       "ESNext"
     ],
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "bundler",
     /* App Router works best with these */
     "jsx": "react-jsx",
     "isolatedModules": true,
