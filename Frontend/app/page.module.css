@@ -1093,3 +1093,32 @@
     min-width: 120px;
   }
 }
+/* Hover movement (replaces framer-motion hover) */
+.programArrow {
+  display: inline-flex;
+  transition: transform 260ms ease;
+}
+.programCard:hover .programArrow {
+  transform: translateX(5px);
+}
+
+/* Image zoom on hover (replaces framer-motion scale) */
+.imgContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 600ms ease-out;
+  will-change: transform;
+}
+.projectCard:hover .imgContainer {
+  transform: scale(1.08);
+}
+
+/* Optional: if you don't already have it */
+.badgePlanned {
+  /* pick a style that matches your theme */
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
