@@ -1,17 +1,21 @@
 <?php
 declare(strict_types=1);
 
-// 1. Error Reporting
-ini_set('display_errors', '0'); // Turn OFF HTML errors for production/API
+// 1. Disable error display in production (logs only)
+ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
-// 2. Autoload
+// 2. Autoload Composer
 $autoloadPath = __DIR__ . '/vendor/autoload.php';
 if (file_exists($autoloadPath)) {
     require_once $autoloadPath;
+} else {
+    http_response_code(500);
+    echo json_encode(['error' => 'Autoload file missing']);
+    exit;
 }
 
-// 3. Load .env
+// 3. Load .env manually
 $envPath = __DIR__ . '/.env';
 if (file_exists($envPath)) {
     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -37,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// 5. Global Helper
+// 5. Global helper function for JSON responses
 if (!function_exists('json')) {
     function json($data, int $status = 200): void {
         http_response_code($status);
@@ -46,10 +50,10 @@ if (!function_exists('json')) {
     }
 }
 
-// 6. Route Dispatch
+// 6. Include Router File
 $routerPath = __DIR__ . '/routes/api.php';
 if (file_exists($routerPath)) {
     require_once $routerPath;
 } else {
-    json(['error' => 'Router missing'], 500);
+    json(['error' => 'Router file missing'], 500);
 }
