@@ -45,96 +45,86 @@ const heroImages = [
   '/images/hero/slide4.jpeg',
 ];
 
-const partners = [
-  'UNICEF',
-  'Save the Children',
-  'USAID',
-  'World Vision',
-  'Oxfam',
-  'Plan International',
-];
+const partners = ['UNICEF', 'Save the Children', 'USAID', 'World Vision', 'Oxfam', 'Plan International'];
 
 /* Motion presets */
 const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const sectionVariants: Variants = {
   hidden: { opacity: 0, y: 26, filter: 'blur(10px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: easeOut },
-  },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease: easeOut } },
 };
 
 const leftVariants: Variants = {
   hidden: { opacity: 0, x: -34, filter: 'blur(10px)' },
-  show: {
-    opacity: 1,
-    x: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.75, ease: easeOut },
-  },
+  show: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.75, ease: easeOut } },
 };
 
 const rightVariants: Variants = {
   hidden: { opacity: 0, x: 34, filter: 'blur(10px)' },
-  show: {
-    opacity: 1,
-    x: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.75, ease: easeOut },
-  },
+  show: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.75, ease: easeOut } },
 };
 
 const gridStagger: Variants = {
   hidden: {},
-  show: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.08 },
-  },
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.08 } },
 };
 
 const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 24, scale: 0.98, filter: 'blur(10px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.6, ease: easeOut },
-  },
+  hidden: { opacity: 0, y: 24, scale: 0.985, filter: 'blur(10px)' },
+  show: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', transition: { duration: 0.6, ease: easeOut } },
 };
+
+function safeText(v: unknown, fallback = '') {
+  return typeof v === 'string' ? v : fallback;
+}
+
+function resolveImg(src?: string) {
+  const s = safeText(src, '');
+  if (!s) return '/images/projects/project1.jpeg';
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  if (s.startsWith('/')) return s;
+  return `/${s}`;
+}
+
+function isExternal(src: string) {
+  return src.startsWith('http://') || src.startsWith('https://');
+}
 
 /* ---------------------------
    Page
 ---------------------------- */
 export default function HomePage() {
+  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [projects, setProjects] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState('');
 
-  const marqueeItems = useMemo(
-    () => [...partners, ...partners, ...partners],
-    []
-  );
+  const marqueeItems = useMemo(() => [...partners, ...partners, ...partners], []);
 
   // Hero slider
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-    }, 6000);
-    return () => clearInterval(timer);
+    }, 6500);
+    return () => window.clearInterval(timer);
   }, []);
 
   // Fetch Programs + Projects
   useEffect(() => {
+    const ctrl = new AbortController();
+
     const fetchData = async () => {
       setLoading(true);
+      setDataError('');
+
       try {
         const [projRes, progRes] = await Promise.all([
-          fetch('http://127.0.0.1:8000/api/projects'),
-          fetch('http://127.0.0.1:8000/api/programs'),
+          fetch(`${API_BASE}/api/projects`, { signal: ctrl.signal }),
+          fetch(`${API_BASE}/api/programs`, { signal: ctrl.signal }),
         ]);
 
         const projJson = await projRes.json();
@@ -145,18 +135,22 @@ export default function HomePage() {
 
         setProjects((projArray || []).slice(0, 3));
         setPrograms(progArray || []);
-      } catch (err) {
-        console.error('Data fetch error:', err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error('Data fetch error:', err);
+          setDataError('Some content could not load. Please refresh or try again.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+    return () => ctrl.abort();
+  }, [API_BASE]);
 
   return (
-    <main>
+    <main className={styles.page}>
       {/* =====================================================
           1) HERO
       ====================================================== */}
@@ -165,45 +159,79 @@ export default function HomePage() {
           <motion.div
             key={currentSlide}
             className={styles.heroBg}
-            initial={{ opacity: 0, scale: 1.1 }}
+            initial={{ opacity: 0, scale: 1.08 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 1.25, ease: easeOut }}
+            transition={{ duration: 1.15, ease: easeOut }}
             style={{ backgroundImage: `url(${heroImages[currentSlide]})` }}
+            aria-hidden="true"
           />
         </AnimatePresence>
 
-        <div className={styles.heroOverlay} />
+        <div className={styles.heroOverlay} aria-hidden="true" />
 
         <div className={styles.heroContainer}>
-          <div className={styles.heroContent}>
-            <span className={styles.eyebrow}>Transforming South Sudan</span>
+          <motion.div
+            className={styles.heroContent}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <span className={styles.eyebrow}>Supporting Children • Transforming Communities</span>
 
             <h1 className={styles.heroTitle}>
-               Creating a <span className={styles.highlight}>Better</span> world for children
+              Creating a <span className={styles.highlight}>better</span> world for children
             </h1>
 
             <p className={styles.heroLead}>
-              CMDI protects vulnerable children and strengthens communities through education,
-              health, WASH, child protection, and long-term resilience.
+              CMDI supports vulnerable children and strengthens communities through education, health,
+              WASH, child protection, and long-term resilience.
             </p>
 
             <div className={styles.heroActions}>
-              <Link href="/projects" className={styles.btnPrimary}>
+              <Link href="/projects" className={styles.btnPrimary} scroll>
                 View Our Work <ArrowRight size={18} />
               </Link>
-              <Link href="/donate" className={styles.btnOutline}>
+              <Link href="/donate" className={styles.btnOutline} scroll>
                 Support Us <Heart size={18} />
               </Link>
             </div>
-          </div>
+
+            <div className={styles.heroMetaRow} aria-label="Quick highlights">
+              <div className={styles.heroMetaPill}>
+                <ShieldCheck size={14} aria-hidden="true" />
+                Child Protection
+              </div>
+              <div className={styles.heroMetaPill}>
+                <Droplets size={14} aria-hidden="true" />
+                WASH & Safe Water
+              </div>
+              <div className={styles.heroMetaPill}>
+                <BookOpen size={14} aria-hidden="true" />
+                Inclusive Education
+              </div>
+            </div>
+
+            <div className={styles.heroDots} aria-label="Hero slides">
+              {heroImages.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`${styles.dot} ${i === currentSlide ? styles.dotActive : ''}`}
+                  onClick={() => setCurrentSlide(i)}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* =====================================================
           2) PARTNERS / MARQUEE
       ====================================================== */}
-      <section className={styles.partnerSection}>
+      <section className={styles.partnerSection} aria-label="Partners marquee">
+        <div className={styles.marqueeFade} aria-hidden="true" />
         <div className={styles.marqueeTrack}>
           {marqueeItems.map((partner, index) => (
             <div key={`${partner}-${index}`} className={styles.partnerLogo}>
@@ -231,7 +259,7 @@ export default function HomePage() {
                 alt="CMDI team and community members"
                 fill
                 className={styles.aboutImg}
-                priority={false}
+                sizes="(max-width: 960px) 92vw, 520px"
               />
             </motion.div>
 
@@ -246,11 +274,10 @@ export default function HomePage() {
               <h2>Driven by compassion, guided by impact</h2>
               <p>
                 CMDI is community-led and child-focused. We work with families, local leaders, and
-                partners to deliver practical support that protects children and helps communities
-                recover and grow.
+                partners to deliver practical support that protects children and helps communities recover and grow.
               </p>
 
-              <Link href="/about" className={styles.btnSoft}>
+              <Link href="/about" className={styles.btnSoft} scroll>
                 Read Our Story <ArrowRight size={18} />
               </Link>
             </motion.div>
@@ -275,6 +302,8 @@ export default function HomePage() {
             <p>Holistic solutions shaped by community needs and delivered with accountability.</p>
           </motion.div>
 
+          {dataError && <p className={styles.inlineError}>{dataError}</p>}
+
           <motion.div
             className={styles.programGrid}
             variants={gridStagger}
@@ -295,13 +324,15 @@ export default function HomePage() {
                     <IconComponent name={prog?.icon_name} />
                   </div>
 
-                  <h3 className={styles.programTitle}>{prog?.title ?? 'Program'}</h3>
+                  <h3 className={styles.programTitle}>{safeText(prog?.title, 'Program')}</h3>
                   <p className={styles.programSummary}>
-                    {prog?.description ??
-                      'We deliver practical support that strengthens children and families.'}
+                    {safeText(
+                      prog?.description,
+                      'We deliver practical support that strengthens children and families.'
+                    )}
                   </p>
 
-                  <Link href="/programs" className={styles.programLink}>
+                  <Link href="/programs" className={styles.programLink} scroll>
                     Learn more <ArrowRight size={16} />
                   </Link>
                 </motion.div>
@@ -309,7 +340,8 @@ export default function HomePage() {
             ) : (
               <motion.p
                 variants={cardVariants}
-                style={{ opacity: 0.6, textAlign: 'center', gridColumn: '1 / -1' }}
+                className={styles.loadingText}
+                aria-live="polite"
               >
                 Loading pillars of impact...
               </motion.p>
@@ -335,7 +367,7 @@ export default function HomePage() {
               <h2>Featured Projects</h2>
             </div>
 
-            <Link href="/projects" className={styles.btnSoft}>
+            <Link href="/projects" className={styles.btnSoft} scroll>
               View All Projects <ArrowRight size={18} />
             </Link>
           </motion.div>
@@ -348,46 +380,43 @@ export default function HomePage() {
             viewport={{ once: true, amount: 0.2 }}
           >
             {!loading && projects.length > 0 ? (
-              projects.map((project: any, i: number) => (
-                <motion.div
-                  key={project?.id ?? i}
-                  className={`${styles.projectCardWrapper} ${styles.scrollAnimate}`}
-                  variants={cardVariants}
-                >
-                  <div className={styles.projectImgBox}>
-                    <Image
-                      src={project?.image_url || '/images/projects/project1.jpeg'}
-                      alt={project?.title || 'Project'}
-                      fill
-                      className={styles.projectImg}
-                      unoptimized
-                    />
-                  </div>
-
+              projects.map((project: any, i: number) => {
+                const imgSrc = resolveImg(project?.image_url);
+                return (
                   <motion.div
-                    className={styles.projectOverlayCard}
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.25, ease: easeOut }}
+                    key={project?.id ?? i}
+                    className={`${styles.projectCardWrapper} ${styles.scrollAnimate}`}
+                    variants={cardVariants}
                   >
-                    <span className={styles.projectCategory}>
-                      <MapPin size={14} />
-                      {project?.category || project?.status || 'Field Work'}
-                    </span>
-
-                    <h4>{project?.title || 'Community Project'}</h4>
-                    <p>{(project?.description || '').substring(0, 110)}...</p>
-
-                    <div className={styles.projectArrow} aria-hidden="true">
-                      <ArrowUpRight size={20} />
+                    <div className={styles.projectImgBox}>
+                      <Image
+                        src={imgSrc}
+                        alt={safeText(project?.title, 'Project')}
+                        fill
+                        className={styles.projectImg}
+                        sizes="(max-width: 960px) 92vw, 420px"
+                        unoptimized={isExternal(imgSrc)}
+                      />
                     </div>
+
+                    <Link href="/projects" className={styles.projectOverlayCard} scroll>
+                      <span className={styles.projectCategory}>
+                        <MapPin size={14} />
+                        {safeText(project?.category, safeText(project?.status, 'Field Work'))}
+                      </span>
+
+                      <h4>{safeText(project?.title, 'Community Project')}</h4>
+                      <p>{safeText(project?.description, '').slice(0, 110)}{safeText(project?.description, '').length > 110 ? '…' : ''}</p>
+
+                      <div className={styles.projectArrow} aria-hidden="true">
+                        <ArrowUpRight size={20} />
+                      </div>
+                    </Link>
                   </motion.div>
-                </motion.div>
-              ))
+                );
+              })
             ) : (
-              <motion.p
-                variants={cardVariants}
-                style={{ opacity: 0.6, textAlign: 'center', gridColumn: '1 / -1' }}
-              >
+              <motion.p variants={cardVariants} className={styles.loadingText} aria-live="polite">
                 Loading featured projects...
               </motion.p>
             )}
@@ -396,49 +425,55 @@ export default function HomePage() {
       </section>
 
       {/* =====================================================
-          6) CTA / DONATE
+          6) CTA / DONATE (UPGRADED)
       ====================================================== */}
       <section className={styles.ctaSection}>
+        <div className={styles.ctaBackdrop} aria-hidden="true" />
         <div className={styles.container}>
-          <div className={styles.ctaIconRow}>
-            <div className={styles.ctaPill}>
-              <Heart size={18} /> Sponsor Care
+          <div className={styles.ctaCard}>
+            <div className={styles.ctaIconRow}>
+              <div className={styles.ctaPill}>
+                <Heart size={18} /> Sponsor Care
+              </div>
+              <div className={styles.ctaPill}>
+                <BookOpen size={18} /> Support Education
+              </div>
+              <div className={styles.ctaPill}>
+                <Droplets size={18} /> Clean Water
+              </div>
+              <div className={styles.ctaPill}>
+                <ShieldCheck size={18} /> Child Protection
+              </div>
             </div>
-            <div className={styles.ctaPill}>
-              <BookOpen size={18} /> Support Education
-            </div>
-            <div className={styles.ctaPill}>
-              <Droplets size={18} /> Clean Water
-            </div>
-            <div className={styles.ctaPill}>
-              <ShieldCheck size={18} /> Child Protection
-            </div>
+
+            <motion.div
+              className={styles.ctaContent}
+              variants={sectionVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.35 }}
+            >
+              <h2>Ready to make a difference?</h2>
+              <p>
+                Your support helps deliver safe learning, clean water, protection services, and essential
+                care for children and families.
+              </p>
+
+              <div className={styles.ctaActions}>
+                <Link href="/donate" className={styles.ctaPrimaryBtn} scroll>
+                  Donate Now <Heart size={18} />
+                </Link>
+
+                <Link href="/partner-with-us" className={styles.ctaSecondaryBtn} scroll>
+                  Partner With Us <ArrowRight size={18} />
+                </Link>
+              </div>
+
+              <div className={styles.ctaFinePrint}>
+                Trusted collaboration • Clear accountability • Community-led delivery
+              </div>
+            </motion.div>
           </div>
-
-          <motion.div
-            className={styles.ctaContent}
-            variants={sectionVariants}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.35 }}
-          >
-            <h2>Ready to make a difference?</h2>
-            <p>
-              Your donation helps deliver safe learning, clean water, protection services, and
-              essential support for children and families.
-            </p>
-
-            <div className={styles.ctaActions}>
-              <Link href="/donate" className={styles.ctaSecondaryBtn}>
-                Donate Now <Heart size={18} />
-              </Link>
-
-              <Link href="/contact" className={styles.ctaSecondaryBtn}>
-                Partner With Us <ArrowRight size={18} />
-              </Link>
-            </div>
-
-          </motion.div>
         </div>
       </section>
     </main>

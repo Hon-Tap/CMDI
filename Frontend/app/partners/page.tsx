@@ -1,68 +1,70 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import React, { useEffect, useMemo } from 'react';
 import styles from './partners.module.css';
-import {
-  Handshake,
-  Globe,
-  Award,
-  ShieldCheck,
-  X,
-  Send,
-  CheckCircle2,
-  ArrowRight,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
-type StatusState = { loading: boolean; success: boolean; error: string };
+type PartnerItem = {
+  name: string;
+  blurb: string;
+  logo?: string; // optional: if you have images for each partner
+};
+
+function initialsFromName(name: string) {
+  const parts = name
+    .replace(/[()]/g, '')
+    .split(' ')
+    .filter(Boolean);
+
+  const picks = parts.filter((p) => /^[A-Za-z]/.test(p));
+  const a = picks[0]?.[0]?.toUpperCase() || 'P';
+  const b = picks[1]?.[0]?.toUpperCase() || 'N';
+  return `${a}${b}`;
+}
+
+function monogramDataUri(initials: string) {
+  const svg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">
+    <defs>
+      <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0" stop-color="#0c74a5" stop-opacity="0.18"/>
+        <stop offset="1" stop-color="#0284c7" stop-opacity="0.12"/>
+      </linearGradient>
+    </defs>
+    <rect width="96" height="96" rx="20" fill="url(#g)"/>
+    <text x="50%" y="54%" text-anchor="middle"
+      font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial"
+      font-size="34" font-weight="900" fill="#0f172a" opacity="0.90">
+      ${initials}
+    </text>
+  </svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
 
 export default function PartnersPage() {
-  // -----------------------------
-  // Modal + form state
-  // -----------------------------
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const [status, setStatus] = useState<StatusState>({
-    loading: false,
-    success: false,
-    error: '',
-  });
-
-  const [formData, setFormData] = useState({
-    org_name: '',
-    contact_person: '',
-    email: '',
-    partnership_type: 'NGO',
-    proposal_summary: '',
-  });
-
-  const closeTimeoutRef = useRef<number | null>(null);
-
-  const openModal = () => {
-    setIsModalOpen(true);
-    setIsClosing(false);
-    setStatus({ loading: false, success: false, error: '' });
-  };
-
-  const closeModal = () => {
-    // play closing animation then unmount
-    setIsClosing(true);
-    if (closeTimeoutRef.current) window.clearTimeout(closeTimeoutRef.current);
-    closeTimeoutRef.current = window.setTimeout(() => {
-      setIsModalOpen(false);
-      setIsClosing(false);
-      setStatus({ loading: false, success: false, error: '' });
-    }, 220);
-  };
-
+  // Reveal animation that matches your CSS (.reveal + .inView)
   useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) window.clearTimeout(closeTimeoutRef.current);
-    };
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal="true"]'));
+    if (!nodes.length) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add(styles.inView);
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -10% 0px' }
+    );
+
+    nodes.forEach((n) => io.observe(n));
+    return () => io.disconnect();
   }, []);
 
-  // -----------------------------
-  // Partner data
-  // -----------------------------
   const featuredPartner = useMemo(
     () => ({
       name: 'Thon Met African Peace Foundation',
@@ -76,21 +78,23 @@ export default function PartnersPage() {
         'Nutrition Cluster',
         'Protection Cluster',
       ],
-      // If you have the logo image in your public folder, update this path:
-      logoSrc: '/images/partners/thon-met.png',
+      logoSrc: '/images/partners/Thonmet.jpg',
+      badge: 'Strategic Partner',
     }),
     []
   );
 
-  const partners = useMemo(
+  const partners: PartnerItem[] = useMemo(
     () => [
       {
         name: 'Relief and Rehabilitation Commission (RRC)',
         blurb: 'Government coordination and regulatory support.',
+        // logo: '/images/partners/rrc.png',
       },
       {
         name: 'Local Authorities',
         blurb: 'Community access, approvals, and operational alignment.',
+        // logo: '/images/partners/local-authorities.png',
       },
       {
         name: 'Education Cluster',
@@ -112,188 +116,26 @@ export default function PartnersPage() {
     []
   );
 
-  // -----------------------------
-  // Submission
-  // -----------------------------
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus({ loading: true, success: false, error: '' });
-
-    try {
-      const res = await fetch('http://127.0.0.1:8000/api/partners', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setStatus({ loading: false, success: true, error: '' });
-
-        // Auto-close after a short delay
-        window.setTimeout(() => {
-          setFormData({
-            org_name: '',
-            contact_person: '',
-            email: '',
-            partnership_type: 'NGO',
-            proposal_summary: '',
-          });
-          closeModal();
-        }, 1700);
-      } else {
-        throw new Error(data?.error || 'Something went wrong');
-      }
-    } catch (err: any) {
-      setStatus({ loading: false, success: false, error: err?.message || 'Submission failed' });
-    }
-  };
-
-  // Close on ESC
-  useEffect(() => {
-    if (!isModalOpen) return;
-
-    const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') closeModal();
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isModalOpen]);
-
   return (
     <main className={styles.page}>
-      {/* =========================
-          MODAL
-      ========================= */}
-      {isModalOpen && (
-        <div
-          className={`${styles.modalOverlay} ${isClosing ? styles.isClosing : ''}`}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Partnership Proposal"
-          onMouseDown={(e) => {
-            // click backdrop to close
-            if (e.target === e.currentTarget) closeModal();
-          }}
-        >
-          <div className={`${styles.modalContent} ${isClosing ? styles.isClosing : ''}`}>
-            <button className={styles.closeBtn} onClick={closeModal} aria-label="Close modal">
-              <X size={20} />
-            </button>
-
-            {status.success ? (
-              <div className={styles.successState}>
-                <CheckCircle2 size={80} />
-                <h2 className={styles.successTitle}>Proposal Received!</h2>
-                <p>
-                  Thank you for reaching out. Our partnership team will contact you within 3–5
-                  business days.
-                </p>
-              </div>
-            ) : (
-              <div className={styles.modalBody}>
-                <div className={styles.modalHeader}>
-                  <Handshake size={40} />
-                  <h2>Partnership Proposal</h2>
-                  <p>Tell us how your organization can work with CMDI.</p>
-                </div>
-
-                <form onSubmit={handleSubmit} className={styles.modalForm}>
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="org_name">Organization Name</label>
-                    <input
-                      id="org_name"
-                      type="text"
-                      placeholder="e.g. Thon Met African Peace Foundation"
-                      required
-                      value={formData.org_name}
-                      onChange={(e) => setFormData({ ...formData, org_name: e.target.value })}
-                    />
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.inputGroup}>
-                      <label htmlFor="contact_person">Contact Person</label>
-                      <input
-                        id="contact_person"
-                        type="text"
-                        placeholder="Your Name"
-                        required
-                        value={formData.contact_person}
-                        onChange={(e) =>
-                          setFormData({ ...formData, contact_person: e.target.value })
-                        }
-                      />
-                    </div>
-
-                    <div className={styles.inputGroup}>
-                      <label htmlFor="email">Email Address</label>
-                      <input
-                        id="email"
-                        type="email"
-                        placeholder="email@org.com"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="partnership_type">Partnership Type</label>
-                    <select
-                      id="partnership_type"
-                      value={formData.partnership_type}
-                      onChange={(e) =>
-                        setFormData({ ...formData, partnership_type: e.target.value })
-                      }
-                    >
-                      <option value="NGO">Non-Governmental Organization (NGO)</option>
-                      <option value="Government">Governmental Body</option>
-                      <option value="Corporate">Corporate / Private Sector</option>
-                      <option value="Funding">Funding / Donor Agency</option>
-                      <option value="Technical">Technical / Advisory Partner</option>
-                    </select>
-                  </div>
-
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="proposal_summary">Brief Proposal Summary</label>
-                    <textarea
-                      id="proposal_summary"
-                      rows={4}
-                      placeholder="Describe the area of collaboration..."
-                      required
-                      value={formData.proposal_summary}
-                      onChange={(e) =>
-                        setFormData({ ...formData, proposal_summary: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {status.error && (
-                    <p style={{ color: '#ef4444', fontWeight: 700, margin: '0.25rem 0 0' }}>
-                      {status.error}
-                    </p>
-                  )}
-
-                  <button type="submit" className={styles.submitBtn} disabled={status.loading}>
-                    {status.loading ? 'Submitting...' : 'Send Proposal'} <Send size={18} />
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* =========================
           HERO
       ========================= */}
       <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <div className={styles.heroEyebrow}>PARTNERSHIPS</div>
+        <div className={styles.heroMedia} aria-hidden="true">
+          <Image
+            src="/images/partners/project-wash.jpeg"
+            alt=""
+            fill
+            className={styles.heroImg}
+            priority
+            sizes="100vw"
+          />
+        </div>
+        <div className={styles.heroOverlay} aria-hidden="true" />
+
+        <div className={`${styles.heroContent} ${styles.reveal}`} data-reveal="true">
+          <p className={styles.heroEyebrow}>Partnerships</p>
           <h1 className={styles.heroTitle}>Our Partners</h1>
           <p className={styles.heroSubtitle}>
             Collaboration is the heartbeat of CMDI. We work with local systems, clusters, and
@@ -307,7 +149,7 @@ export default function PartnersPage() {
       ========================= */}
       <section className={styles.section}>
         <div className={styles.container}>
-          <header className={styles.sectionHeader}>
+          <header className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
             <span className={styles.sectionTag}>Collective Strength</span>
             <h2 className={styles.sectionTitle}>We don’t work alone.</h2>
             <p className={styles.sectionText}>
@@ -316,18 +158,12 @@ export default function PartnersPage() {
             </p>
           </header>
 
-          {/* Featured partner */}
-         <div className={styles.featuredPartner}>
-  <div>
-    <img
-      className={styles.partnerLogo}
-      src="/images/partners/Thonmet.jpg"
-      alt="Thon Men African Peace Foundation logo"
-      loading="eager"
-    />
-  </div>
-
-
+          {/* Featured partner (matches CSS: text + shaped image) */}
+          <div
+            className={`${styles.featuredPartner} ${styles.reveal}`}
+            data-reveal="true"
+            style={{ ['--d' as any]: '80ms' }}
+          >
             <div>
               <h3 className={styles.partnerName}>{featuredPartner.name}</h3>
               <p className={styles.partnerDescription}>{featuredPartner.description}</p>
@@ -340,35 +176,55 @@ export default function PartnersPage() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Other partners */}
-          <div className={styles.partnerGrid}>
-            {partners.map((p) => (
-              <article key={p.name} className={styles.partnerCard}>
-                <div
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 18,
-                    display: 'grid',
-                    placeItems: 'center',
-                    margin: '0 auto 0.75rem',
-                    background: 'rgba(0, 174, 239, 0.10)',
-                    border: '1px solid rgba(0, 174, 239, 0.25)',
-                  }}
-                  aria-hidden="true"
-                >
-                  <Handshake size={30} />
+            <div className={styles.partnerArt}>
+              <div className={styles.partnerShape}>
+                <div className={styles.partnerShapeInner}>
+                  <Image
+                    src={featuredPartner.logoSrc}
+                    alt={`${featuredPartner.name} logo`}
+                    fill
+                    className={styles.partnerLogo}
+                    sizes="(max-width: 960px) 82vw, 420px"
+                  />
                 </div>
-                <h4>{p.name}</h4>
-                <p>{p.blurb}</p>
-              </article>
-            ))}
+                <div className={styles.partnerBadge}>{featuredPartner.badge}</div>
+              </div>
+            </div>
           </div>
 
-          {/* CTA */}
-          <div className={styles.partnerCTA}>
+          {/* Partner grid */}
+          <div className={styles.partnerGrid}>
+            {partners.map((p, idx) => {
+              const fallback = monogramDataUri(initialsFromName(p.name));
+              return (
+                <article
+                  key={p.name}
+                  className={`${styles.partnerCard} ${styles.reveal}`}
+                  data-reveal="true"
+                  style={{ ['--d' as any]: `${120 + idx * 45}ms` }}
+                >
+                  <div className={styles.partnerCardTop}>
+                    <div className={styles.partnerMark} aria-hidden="true">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.logo || fallback} alt="" />
+                    </div>
+                    <div>
+                      <h4>{p.name}</h4>
+                    </div>
+                  </div>
+                  <p>{p.blurb}</p>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* CTA — now links to FORM PAGE */}
+          <div
+            className={`${styles.partnerCTA} ${styles.reveal}`}
+            data-reveal="true"
+            style={{ ['--d' as any]: '160ms' }}
+          >
             <h3>Become a CMDI Partner</h3>
             <p>
               Are you an organization looking to make a real difference on the ground in South
@@ -376,40 +232,59 @@ export default function PartnersPage() {
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
-              <button className={styles.ctaBtn} onClick={openModal}>
-                Partner with Us <ArrowRight size={18} />
-              </button>
-              <a className={styles.ctaBtn} href="/projects">
+              <Link className={styles.ctaBtn} href="/partner-with-us" scroll>
+                Partner With Us <ArrowRight size={18} />
+              </Link>
+
+              <Link className={styles.ctaBtn} href="/projects" scroll>
                 View Our Work <ArrowRight size={18} />
-              </a>
+              </Link>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* (Optional) Mini credibility row — keep if you want */}
-          <div style={{ marginTop: '3.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-            <div style={{ padding: '1.3rem 1.2rem', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 18, background: '#fff', boxShadow: '0 10px 26px rgba(2,6,23,0.05)' }}>
-              <Globe size={22} />
-              <div style={{ fontWeight: 900, marginTop: 8 }}>Local Access</div>
-              <div style={{ color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>
-                Deep roots in hard-to-reach areas like Fangak.
-              </div>
-            </div>
+      {/* Optional: trust strip section that reuses your styles */}
+      <section className={styles.sectionAlt}>
+        <div className={styles.container}>
+          <header className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
+            <span className={styles.sectionTag}>How We Partner</span>
+            <h2 className={styles.sectionTitle}>Clear, accountable collaboration</h2>
+            <p className={styles.sectionText}>
+              We align goals, plan jointly, and deliver with safeguarding and accountability at the core.
+            </p>
+          </header>
 
-            <div style={{ padding: '1.3rem 1.2rem', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 18, background: '#fff', boxShadow: '0 10px 26px rgba(2,6,23,0.05)' }}>
-              <ShieldCheck size={22} />
-              <div style={{ fontWeight: 900, marginTop: 8 }}>Accountability</div>
-              <div style={{ color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>
-                Clear reporting and strong safeguarding standards.
-              </div>
-            </div>
+          <div className={styles.partnerGrid}>
+            {[
+              { title: 'Local Access', text: 'Strong community trust and practical field presence in Fangak.' },
+              { title: 'Safeguarding', text: 'Child protection and accountability are non-negotiable.' },
+              { title: 'Results Focused', text: 'We coordinate to deliver outcomes that matter for children.' },
+            ].map((c, i) => (
+              <article
+                key={c.title}
+                className={`${styles.partnerCard} ${styles.reveal}`}
+                data-reveal="true"
+                style={{ ['--d' as any]: `${i * 55}ms` }}
+              >
+                <div className={styles.partnerCardTop}>
+                  <div className={styles.partnerMark} aria-hidden="true">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={monogramDataUri(c.title.slice(0, 2).toUpperCase())} alt="" />
+                  </div>
+                  <div>
+                    <h4>{c.title}</h4>
+                  </div>
+                </div>
+                <p>{c.text}</p>
+              </article>
+            ))}
+          </div>
 
-            <div style={{ padding: '1.3rem 1.2rem', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 18, background: '#fff', boxShadow: '0 10px 26px rgba(2,6,23,0.05)' }}>
-              <Award size={22} />
-              <div style={{ fontWeight: 900, marginTop: 8 }}>Proven Delivery</div>
-              <div style={{ color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>
-                Practical results through coordinated field work.
-              </div>
-            </div>
+          <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'center' }}>
+            <Link className={styles.ctaBtn} href="/partner-with-us" scroll>
+              Start a Partnership Request <ArrowRight size={18} />
+            </Link>
           </div>
         </div>
       </section>

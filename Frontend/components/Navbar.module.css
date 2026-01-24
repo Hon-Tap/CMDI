@@ -1,70 +1,82 @@
 /* Navbar.module.css */
 
 /* =========================================================
-   1) DESIGN TOKENS
+   1) TOKENS (Modern, consistent, responsive)
    ========================================================= */
 .navbar {
   /* Brand */
-  --nav-blue: #0f172a;
+  --nav-ink: #0f172a;
   --nav-text: #334155;
   --nav-muted: #64748b;
   --nav-accent: #0c74a5;
+  --nav-accent-2: #0284c7;
   --nav-white: #ffffff;
 
   /* Surfaces */
-  --glass-surface: rgba(255, 255, 255, 0.86);
-  --glass-border: rgba(15, 23, 42, 0.08);
-  --solid-surface: rgba(255, 255, 255, 0.98);
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-strong: rgba(255, 255, 255, 0.92);
+  --border: rgba(15, 23, 42, 0.10);
 
   /* Layout */
-  --nav-height: 90px;
-  --nav-height-scrolled: 64px;
-  --max-width: 1280px;
+  --max: 1280px;
+  --h: 92px;
+  --h-scrolled: 66px;
 
-  /* Radii */
+  /* Shape */
   --r-xs: 10px;
   --r-sm: 12px;
   --r-md: 16px;
+  --pill: 999px;
 
   /* Shadows */
-  --shadow-soft: 0 6px 22px -10px rgba(15, 23, 42, 0.18);
-  --shadow-strong: 0 18px 50px -18px rgba(15, 23, 42, 0.30);
+  --shadow-soft: 0 10px 28px -18px rgba(15, 23, 42, 0.22);
+  --shadow-strong: 0 18px 56px -20px rgba(15, 23, 42, 0.35);
 
   /* Motion */
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease: cubic-bezier(0.2, 0.85, 0.2, 1);
 }
 
 /* =========================================================
-   2) MAIN NAVBAR (GLASS + SHRINK)
+   2) HEADER SHELL (Glass + shrink)
    ========================================================= */
 .navbar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: var(--nav-height);
+  height: var(--h);
   z-index: 1000;
   isolation: isolate;
 
-  background: var(--glass-surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass);
+  border-bottom: 1px solid var(--border);
 
-  transition: height 0.35s var(--ease), background 0.35s var(--ease), box-shadow 0.35s var(--ease);
+  transition:
+    height 0.32s var(--ease),
+    background 0.32s var(--ease),
+    box-shadow 0.32s var(--ease),
+    border-color 0.32s var(--ease);
+}
+
+@supports ((-webkit-backdrop-filter: blur(12px)) or (backdrop-filter: blur(12px))) {
+  .navbar {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }
 
 .shrink {
-  height: var(--nav-height-scrolled);
-  background: var(--solid-surface);
+  height: var(--h-scrolled);
+  background: var(--glass-strong);
   box-shadow: var(--shadow-strong);
+  border-bottom-color: rgba(15, 23, 42, 0.14);
 }
 
 .container {
-  max-width: var(--max-width);
+  max-width: var(--max);
   height: 100%;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 clamp(1rem, 2.2vw, 1.75rem);
 
   display: flex;
   align-items: center;
@@ -72,22 +84,21 @@
 }
 
 /* =========================================================
-   3) SKIP LINK (A11Y)
+   3) (Optional) Skip Link styling hook (if you add it)
    ========================================================= */
 .skipLink {
   position: absolute;
-  top: -200px;
+  top: -220px;
   left: 1rem;
   background: var(--nav-accent);
   color: #fff;
-  padding: 0.75rem 1.25rem;
-  z-index: 2000;
+  padding: 0.75rem 1.1rem;
   border-radius: var(--r-xs);
   font-weight: 800;
   text-decoration: none;
-  transition: top 0.25s ease;
+  z-index: 2000;
+  transition: top 0.2s ease;
 }
-
 .skipLink:focus {
   top: 1rem;
   outline: 2px solid #fff;
@@ -98,16 +109,17 @@
    4) LOGO
    ========================================================= */
 .logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
   z-index: 1002;
+  min-width: 170px;
 }
 
 .logoImg {
-  border-radius: 10px;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.10));
+  border-radius: 12px;
+  box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.45);
 }
 
 .logoText {
@@ -118,17 +130,18 @@
 
 .brand {
   font-weight: 900;
-  font-size: 1.25rem;
-  color: var(--nav-blue);
+  font-size: 1.18rem;
   letter-spacing: -0.02em;
+  color: rgb(9, 84, 137);
 }
 
 .tagline {
-  font-size: 0.7rem;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  color: var(--nav-accent);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--nav-accent);
 }
 
 /* =========================================================
@@ -137,7 +150,7 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
 .navItem {
@@ -148,41 +161,47 @@
 }
 
 .navLink {
+  appearance: none;
   background: transparent;
-  border: none;
+  border: 0;
   cursor: pointer;
-
-  padding: 0.62rem 0.85rem;
-  border-radius: 999px;
 
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 
-  font-size: 0.95rem;
-  font-weight: 650;
+  padding: 0.62rem 0.9rem;
+  border-radius: var(--pill);
+
+  font-size: 0.96rem;
+  font-weight: 700;
   color: var(--nav-text);
   text-decoration: none;
 
-  transition: background 0.2s var(--ease), color 0.2s var(--ease), transform 0.2s var(--ease);
+  transition:
+    background 0.18s var(--ease),
+    color 0.18s var(--ease),
+    transform 0.18s var(--ease);
 }
 
 .navLink:hover,
 .navLink[aria-expanded="true"] {
-  color: var(--nav-accent);
   background: rgba(12, 116, 165, 0.10);
+  color: var(--nav-accent);
+}
+
+.navLink:active {
+  transform: translateY(1px);
 }
 
 .navLink:focus-visible {
   outline: 2px solid rgba(12, 116, 165, 0.45);
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
 
 .navLink svg {
-  width: 16px;
-  height: 16px;
   opacity: 0.75;
-  transition: transform 0.25s var(--ease), opacity 0.2s var(--ease);
+  transition: transform 0.22s var(--ease), opacity 0.18s ease;
 }
 
 .navLink:hover svg {
@@ -193,8 +212,18 @@
   transform: rotate(180deg);
 }
 
+/* Slightly tighten spacing on medium screens */
+@media (max-width: 1100px) {
+  .nav {
+    gap: 0.5rem;
+  }
+  .navLink {
+    padding: 0.58rem 0.78rem;
+  }
+}
+
 /* =========================================================
-   6) DROPDOWN (DESKTOP POPOVER + ARROW)
+   6) DROPDOWN (Desktop popover)
    ========================================================= */
 .dropdown {
   position: absolute;
@@ -202,11 +231,11 @@
   left: 50%;
   transform: translateX(-50%) translateY(10px) scale(0.98);
 
-  min-width: 250px;
+  min-width: 260px;
   padding: 0.55rem;
 
   background: var(--nav-white);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.10);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-strong);
 
@@ -215,14 +244,14 @@
   pointer-events: none;
 
   transition:
-    opacity 0.18s ease,
-    transform 0.28s var(--ease),
-    visibility 0s linear 0.18s;
+    opacity 0.16s ease,
+    transform 0.26s var(--ease),
+    visibility 0s linear 0.16s;
 
   z-index: 1005;
 }
 
-/* Hover bridge (keeps menu open while moving mouse) */
+/* hover bridge */
 .dropdown::before {
   content: "";
   position: absolute;
@@ -232,7 +261,7 @@
   height: 16px;
 }
 
-/* Arrow / notch touching trigger + menu */
+/* notch */
 .dropdown::after {
   content: "";
   position: absolute;
@@ -243,15 +272,14 @@
   transform: translateX(-50%) rotate(45deg);
 
   background: var(--nav-white);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: -6px -6px 18px -12px rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: -8px -8px 22px -18px rgba(15, 23, 42, 0.55);
 }
 
-.dropdown.show {
+.show {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-
   transform: translateX(-50%) translateY(0) scale(1);
   transition-delay: 0s;
 }
@@ -264,11 +292,11 @@
   border-radius: 12px;
 
   color: var(--nav-text);
-  font-weight: 600;
-  font-size: 0.93rem;
+  font-weight: 700;
+  font-size: 0.95rem;
   text-decoration: none;
 
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .dropdown a:hover {
@@ -283,27 +311,30 @@
 }
 
 /* =========================================================
-   7) DONATE BUTTON
+   7) CTA BUTTON
    ========================================================= */
 .donateBtn {
-  margin-left: 0.35rem;
-  padding: 0.78rem 1.5rem;
-  border-radius: 999px;
+  margin-left: 0.25rem;
+  padding: 0.78rem 1.45rem;
+  border-radius: var(--pill);
 
-  background: linear-gradient(135deg, var(--nav-accent), #0284c7);
+  background: linear-gradient(135deg, var(--nav-accent), var(--nav-accent-2));
   color: #fff;
 
-  font-weight: 800;
+  font-weight: 850;
   font-size: 0.95rem;
   text-decoration: none;
 
-  box-shadow: 0 10px 22px rgba(2, 132, 199, 0.22);
-  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), filter 0.2s var(--ease);
+  box-shadow: 0 16px 34px -20px rgba(2, 132, 199, 0.60);
+  transition:
+    transform 0.18s var(--ease),
+    box-shadow 0.18s var(--ease),
+    filter 0.18s ease;
 }
 
 .donateBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgba(2, 132, 199, 0.30);
+  box-shadow: 0 22px 44px -22px rgba(2, 132, 199, 0.70);
   filter: brightness(1.02);
 }
 
@@ -317,7 +348,7 @@
 }
 
 /* =========================================================
-   8) MOBILE HAMBURGER
+   8) MOBILE MENU BUTTON
    ========================================================= */
 .menuBtn {
   display: none;
@@ -333,14 +364,15 @@
   justify-content: center;
   align-items: center;
   gap: 6px;
+  
 }
 
 .menuBtn span {
   width: 24px;
   height: 2.5px;
-  background: var(--nav-blue);
+  background: rgb(9, 84, 137);
   border-radius: 4px;
-  transition: transform 0.3s var(--ease), opacity 0.25s ease;
+  transition: transform 0.28s var(--ease), opacity 0.2s ease;
 }
 
 .menuOpen span:nth-child(1) {
@@ -352,20 +384,23 @@
 .menuOpen span:nth-child(3) {
   transform: translateY(-8.5px) rotate(-45deg);
 }
-
 /* =========================================================
-   9) MOBILE DRAWER + SIDE-FLYOUT DROPDOWN (THE FIX)
+   9) BACKDROP + MOBILE DRAWER (FIXED DROPDOWN)
+   - Mobile dropdown becomes an inline accordion (always visible)
+   - No off-canvas flyout (which disappears on small screens)
    ========================================================= */
 .backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(4px);
-  z-index: 1000;
+  -webkit-backdrop-filter: blur(4px);
 
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.22s ease;
+
+  z-index: 1000;
 }
 
 .backdropShow {
@@ -383,122 +418,161 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: min(86vw, 360px);
+    width: min(88vw, 380px);
     height: 100dvh;
 
     background: var(--nav-white);
-    box-shadow: -18px 0 60px rgba(15, 23, 42, 0.18);
+    border-left: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: -22px 0 64px -26px rgba(15, 23, 42, 0.45);
 
     display: flex;
     flex-direction: column;
-    align-items: stretch; /* FIX: "justify" is not valid */
+    align-items: stretch;
     justify-content: flex-start;
 
-    padding: 5.25rem 1.25rem 2.25rem;
-    gap: 0.6rem;
+    padding: calc(5rem + env(safe-area-inset-top)) 1.1rem 1.5rem;
+    gap: 0.65rem;
 
-    transform: translateX(100%);
-    transition: transform 0.35s var(--ease);
+    transform: translateX(110%);
+    transition: transform 0.34s var(--ease);
 
     z-index: 1001;
 
     overflow-y: auto;
-    overflow-x: visible; /* IMPORTANT: allow sideways flyout */
+    overflow-x: hidden; /* important for accordion style */
+    overscroll-behavior: contain;
   }
 
-  .nav.open {
+  /* Keep both selectors safe */
+  .nav.open,
+  .open {
     transform: translateX(0);
   }
 
   .navItem {
     width: 100%;
     position: relative;
+    display: block;
   }
 
-  /* Big, comfy touch targets */
+  /* Touch targets */
   .navLink {
     width: 100%;
     justify-content: space-between;
 
     padding: 0.95rem 1rem;
-    border-radius: 14px;
+    border-radius: 16px;
 
-    font-size: 1.05rem;
-    font-weight: 750;
+    font-size: 1.02rem;
+    font-weight: 850;
 
     background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease);
   }
 
-  .navLink:hover,
+  .navLink:hover {
+    background: #eef2f7;
+    border-color: rgba(15, 23, 42, 0.10);
+  }
+
   .navLink[aria-expanded="true"] {
     background: #eef2f7;
+    border-color: rgba(0, 174, 239, 0.28);
   }
 
-  /*
-    SIDE-FLYOUT DROPDOWN:
-    Opens horizontally (to the LEFT) from the clicked item,
-    like a desktop popover — not an accordion pushing content down.
-  */
+  /* ✅ MOBILE DROPDOWN = INLINE ACCORDION */
   .dropdown {
-    top: 50%;
+    /* override desktop popover positioning */
+    position: static;
+    top: auto;
     left: auto;
-    right: calc(100% + 12px);
-    transform: translateY(-50%) translateX(10px) scale(0.98);
+    right: auto;
+    transform: none;
 
-    min-width: 240px;
-    max-width: min(72vw, 300px);
+    /* accordion mechanics */
+    max-height: 0;
+    overflow: hidden;
 
-    padding: 0.55rem;
-    border-radius: var(--r-md);
+    opacity: 1;         /* keep visible; we collapse by height */
+    visibility: visible; /* keep visible; we collapse by height */
+    pointer-events: auto;
 
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    /* visual */
+    margin: 0.25rem 0 0;
+    padding: 0;
 
-    transition:
-      opacity 0.18s ease,
-      transform 0.28s var(--ease),
-      visibility 0s linear 0.18s;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+
+    transition: max-height 0.32s var(--ease), padding 0.22s ease;
   }
 
-  /* Remove the hover-bridge on mobile */
-  .dropdown::before {
+  /* remove notch/bridge from desktop dropdown */
+  .dropdown::before,
+  .dropdown::after {
     display: none;
   }
 
-  /* Move the notch to the RIGHT side so it touches the trigger */
-  .dropdown::after {
-    top: 24px;
-    left: auto;
-    right: -7px;
-
-    transform: rotate(45deg);
-    box-shadow: 10px 0 22px rgba(15, 23, 42, 0.14);
-  }
-
-  .dropdown.show {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-
-    transform: translateY(-50%) translateX(0) scale(1);
-    transition-delay: 0s;
+  .show {
+    /* big enough to fit menu links */
+    max-height: 420px;
+    padding: 0.45rem 0 0;
   }
 
   .dropdown a {
-    padding: 0.9rem 0.95rem;
-    font-size: 1rem;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+
+    text-decoration: none;
+    font-size: 0.98rem;
+    font-weight: 800;
+
+    color: var(--nav-text);
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.06);
+
+    transition: transform 0.18s var(--ease), border-color 0.18s ease, background 0.18s ease;
+  }
+
+  .dropdown a + a {
+    margin-top: 0.55rem;
   }
 
   .dropdown a:hover {
-    transform: translateX(0); /* reduce sideways movement in tight space */
+    transform: translateY(-1px);
+    border-color: rgba(0, 174, 239, 0.28);
+    background: rgba(0, 174, 239, 0.04);
+  }
+
+  .dropdown a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 174, 239, 0.22);
   }
 
   .donateBtn {
-    margin: 0.9rem 0 0 0;
+    margin: 0.9rem 0 0;
     width: 100%;
     text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .logo {
+    min-width: auto;
+    gap: 0.6rem;
+  }
+  .brand {
+    font-size: 1.08rem;
+  }
+  .tagline {
+    font-size: 0.68rem;
   }
 }
 

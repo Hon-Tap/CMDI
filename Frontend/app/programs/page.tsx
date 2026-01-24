@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+   import Link from 'next/link';
 import styles from './programs.module.css';
 import { 
   Droplets, 
@@ -188,11 +189,18 @@ export default function ProgramsPage() {
             <p className={styles.ctaText}>
               Your partnership allows us to expand these pillars to more counties across South Sudan.
             </p>
-            <div className={styles.ctaButtons}>
-              <button className={styles.btnPrimary}>Donate Now</button>
-              <button className={styles.btnOutline}>Partner with us</button>
-            </div>
+         
+
+          <div className={styles.ctaButtons}>
+            <Link href="/donate" className={styles.btnPrimary} scroll>
+              Donate Now
+            </Link>
+
+            <Link href="/partner-with-us" className={styles.btnOutline} scroll>
+              Partner With Us
+            </Link>
           </div>
+
         </div>
       </section>
     </main>
