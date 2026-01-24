@@ -207,49 +207,117 @@
 }
 
 /* =========================
-   Buttons
+   Buttons 
 ========================= */
+
 .btnPrimary,
 .btnOutline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  text-decoration: none;
-  font-weight: 900;
+
+  padding: 0.9rem 1.35rem;
   border-radius: 999px;
-  padding: 0.85rem 1.25rem;
-  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease, border-color 200ms ease;
+
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  line-height: 1;
+
+  border: 1px solid transparent;
+  cursor: pointer;
+
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    filter 180ms ease;
+  will-change: transform;
 }
 
-.btnPrimary, .ctaSecondaryBtn {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+/* Make icons feel aligned + consistent */
+.btnPrimary svg,
+.btnOutline svg {
+  flex: 0 0 auto;
+}
+
+/* PRIMARY: high-contrast gradient pill */
+.btnPrimary {
   color: #fff;
-  box-shadow: 0 18px 40px -22px rgba(2, 132, 199, 0.75);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow:
+    0 18px 40px -22px rgba(2, 132, 199, 0.70),
+    0 10px 24px -18px rgba(15, 23, 42, 0.25);
 }
 
 .btnPrimary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 22px 48px -26px rgba(2, 132, 199, 0.85);
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+  box-shadow:
+    0 26px 60px -34px rgba(2, 132, 199, 0.85),
+    0 14px 30px -22px rgba(15, 23, 42, 0.30);
 }
 
+.btnPrimary:active {
+  transform: translateY(0px);
+  filter: brightness(0.98);
+}
+
+/* OUTLINE: clean, pro outline with subtle fill on hover */
 .btnOutline {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.70);
+  color: var(--deep, #0f172a); /* falls back to slate */
+  border-color: rgba(2, 132, 199, 0.30);
+  box-shadow: 0 10px 22px -18px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(8px);
 }
 
 .btnOutline:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+  border-color: rgba(2, 132, 199, 0.45);
+  background: rgba(2, 132, 199, 0.08);
+  box-shadow:
+    0 16px 34px -22px rgba(2, 132, 199, 0.25),
+    0 12px 26px -22px rgba(15, 23, 42, 0.22);
 }
 
+.btnOutline:active {
+  transform: translateY(0px);
+}
+
+/* Focus visibility (keyboard users) */
 .btnPrimary:focus-visible,
 .btnOutline:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.60);
+  outline: 3px solid rgba(2, 132, 199, 0.35);
   outline-offset: 3px;
 }
+
+/* Optional: full-width on small screens if you add a wrapper */
+@media (max-width: 520px) {
+  .btnPrimary,
+  .btnOutline {
+    width: 100%;
+  }
+}
+
+/* Optional: disabled styling if you ever use <button disabled> */
+.btnPrimary:disabled,
+.btnOutline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+/* Keep your existing hook class if you want a secondary CTA wrapper */
+.ctaSecondaryBtn {
+  /* Intentionally left as a hook class: add overrides here if needed */
+}
+
 
 /* =========================
    Fact cards
