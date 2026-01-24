@@ -189,18 +189,17 @@ export default function ProgramsPage() {
             <p className={styles.ctaText}>
               Your partnership allows us to expand these pillars to more counties across South Sudan.
             </p>
-         
 
-          <div className={styles.ctaButtons}>
-            <Link href="/donate" className={styles.btnPrimary} scroll>
-              Donate Now
-            </Link>
+            <div className={styles.ctaButtons}>
+              <Link href="/donate" className={styles.btnPrimary} scroll>
+                Donate Now
+              </Link>
 
-            <Link href="/partner-with-us" className={styles.btnOutline} scroll>
-              Partner With Us
-            </Link>
+              <Link href="/partner-with-us" className={styles.btnOutline} scroll>
+                Partner With Us
+              </Link>
+            </div>
           </div>
-
         </div>
       </section>
     </main>

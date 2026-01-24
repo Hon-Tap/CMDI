@@ -561,75 +561,127 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* 7) CTA (Home-style premium)                                                 */
+/* 7) CTA (Home-style premium — rewritten)                                     */
 /* -------------------------------------------------------------------------- */
 .ctaWrapper {
-  padding: clamp(4rem, 6vw, 6.5rem) 0;
+  padding: clamp(4.25rem, 6vw, 7rem) 0;
 }
 
 .ctaCard {
   position: relative;
   overflow: hidden;
-  border-radius: clamp(26px, 3vw, 40px);
-  padding: clamp(3.5rem, 5vw, 5.2rem) clamp(1.5rem, 4vw, 3rem);
+  isolation: isolate;
+
+  border-radius: clamp(26px, 3vw, 42px);
+  padding: clamp(3.2rem, 5vw, 5.1rem) clamp(1.35rem, 4vw, 3.1rem);
   text-align: center;
   color: #fff;
 
+  border: 1px solid rgba(255, 255, 255, 0.14);
+
   background:
-    radial-gradient(900px 450px at 20% 20%, rgba(255, 255, 255, 0.16), transparent 60%),
-    radial-gradient(1100px 600px at 80% 40%, rgba(0, 174, 239, 0.35), transparent 55%),
+    radial-gradient(900px 520px at 18% 22%, rgba(255, 255, 255, 0.12), transparent 60%),
+    radial-gradient(900px 520px at 82% 32%, rgba(0, 174, 239, 0.34), transparent 58%),
+    radial-gradient(800px 520px at 70% 85%, rgba(245, 158, 11, 0.18), transparent 60%),
     linear-gradient(135deg, var(--p-navy) 0%, var(--p-primary) 100%);
 
-  box-shadow: 0 28px 70px rgba(0, 174, 239, 0.22);
-  isolation: isolate;
+  box-shadow:
+    0 26px 70px rgba(2, 6, 23, 0.28),
+    0 24px 60px rgba(0, 174, 239, 0.16);
 }
 
-.ctaCard::after {
+/* subtle darkening for readability */
+.ctaCard::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(2, 6, 23, 0.0), rgba(2, 6, 23, 0.22));
+  z-index: 0;
   pointer-events: none;
+
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.00) 0%, rgba(2, 6, 23, 0.22) 100%);
+}
+
+/* floating orb accents */
+.ctaCard::after {
+  content: "";
+  position: absolute;
+  inset: -140px;
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    radial-gradient(520px 360px at 20% 30%, rgba(0, 174, 239, 0.20), transparent 60%),
+    radial-gradient(520px 360px at 80% 28%, rgba(255, 255, 255, 0.12), transparent 62%),
+    radial-gradient(520px 360px at 70% 85%, rgba(245, 158, 11, 0.16), transparent 65%);
+
+  opacity: 0.95;
+  animation: ctaFloat 10s var(--p-ease) infinite;
+}
+
+@keyframes ctaFloat {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+  100% { transform: translateY(0); }
 }
 
 .ctaIcon {
   position: relative;
   z-index: 1;
-  color: rgba(255, 255, 255, 0.92);
-  margin-bottom: 1.2rem;
-  filter: drop-shadow(0 18px 45px rgba(2, 6, 23, 0.35));
+
+  width: 56px;
+  height: 56px;
+
+  margin: 0 auto 1.25rem;
+  display: grid;
+  place-items: center;
+
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 18px 52px rgba(2, 6, 23, 0.32);
 }
 
 .ctaTitle {
   position: relative;
   z-index: 1;
+
   margin: 0 0 0.9rem;
-  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-size: clamp(2.05rem, 3.4vw, 3.15rem);
   font-weight: 950;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
   text-wrap: balance;
 }
 
 .ctaText {
   position: relative;
   z-index: 1;
-  margin: 0 auto 2.2rem;
-  max-width: 70ch;
-  font-size: 1.12rem;
-  line-height: 1.75;
+
+  margin: 0 auto 2.3rem;
+  max-width: 72ch;
+
+  font-size: 1.08rem;
+  line-height: 1.8;
   color: rgba(226, 232, 240, 0.92);
+  text-wrap: pretty;
 }
 
 .ctaButtons {
   position: relative;
   z-index: 1;
+
   display: flex;
   justify-content: center;
-  gap: 0.9rem;
+  align-items: center;
+  gap: 0.95rem;
   flex-wrap: wrap;
 }
 
-/* Buttons (same feel as Home) */
+/* Buttons (same feel as Home, stronger polish) */
 .btnPrimary,
 .btnOutline {
   display: inline-flex;
@@ -637,51 +689,84 @@
   justify-content: center;
   gap: 0.6rem;
 
-  padding: 0.95rem 1.6rem;
+  min-height: 48px;
+  padding: 0.95rem 1.7rem;
   border-radius: 999px;
 
   font-weight: 950;
   letter-spacing: -0.01em;
-
-  cursor: pointer;
-  transition: transform 220ms var(--p-ease), box-shadow 220ms var(--p-ease), background 220ms var(--p-ease), border-color 220ms var(--p-ease), filter 220ms var(--p-ease);
+  text-decoration: none;
   user-select: none;
+  cursor: pointer;
+
   border: 1px solid rgba(255, 255, 255, 0.18);
+  transition:
+    transform 220ms var(--p-ease),
+    box-shadow 220ms var(--p-ease),
+    background 220ms var(--p-ease),
+    border-color 220ms var(--p-ease),
+    filter 220ms var(--p-ease);
+  will-change: transform;
 }
 
 .btnPrimary {
-  background: linear-gradient(180deg, #ffffff, #f3f6ff);
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
   color: var(--p-navy);
-  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.18);
+
+  box-shadow:
+    0 18px 55px rgba(2, 6, 23, 0.22),
+    0 10px 30px rgba(255, 255, 255, 0.08);
 }
 
 .btnPrimary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 22px 60px rgba(2, 6, 23, 0.22);
+  box-shadow: 0 26px 80px rgba(2, 6, 23, 0.26);
   filter: saturate(1.05);
+}
+
+.btnPrimary:active {
+  transform: translateY(-1px);
 }
 
 .btnPrimary:focus-visible {
   outline: none;
-  box-shadow: var(--p-ring), 0 22px 60px rgba(2, 6, 23, 0.22);
+  box-shadow: var(--p-ring), 0 26px 80px rgba(2, 6, 23, 0.26);
 }
 
 .btnOutline {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.09);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.26);
+
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 16px 44px rgba(2, 6, 23, 0.18);
 }
 
 .btnOutline:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.40);
+  border-color: rgba(255, 255, 255, 0.42);
+}
+
+.btnOutline:active {
+  transform: translateY(-1px);
 }
 
 .btnOutline:focus-visible {
   outline: none;
   box-shadow: var(--p-ring);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .ctaCard::after {
+    animation: none !important;
+  }
+  .btnPrimary,
+  .btnOutline {
+    transition: none !important;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
