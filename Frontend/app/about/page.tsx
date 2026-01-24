@@ -109,9 +109,9 @@ export default function AboutPage() {
       },
       {
         key: 'fieldCoordinator',
-        name: 'Micheal Taban Wanjang',
+        name: 'Michael Taban Wanjang',
         title: 'Field Coordinator (Fangak County)',
-        image: '/images/team/MichealTabanWanjang.jpeg',
+        image: '/images/team/MichaelTabanWanjang.jpeg',
         blurb:
           'Oversees day-to-day field operations and coordinates community-level implementation to ensure activities are delivered safely, on time, and to standard.',
         responsibilities: [
