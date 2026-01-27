@@ -1,19 +1,39 @@
 <?php
+
 declare(strict_types=1);
 
-// 1. Disable error display in production (logs only)
-ini_set('display_errors', '0');
+/*
+|--------------------------------------------------------------------------
+| Bootstrap / Entry
+|--------------------------------------------------------------------------
+| - Keep runtime errors out of the response (log only)
+| - Load Composer autoloader
+| - Fail fast with a clean JSON error if dependencies are missing
+|--------------------------------------------------------------------------
+*/
+
+// 1) Error handling (production-safe)
+ini_set('display_errors', '0');          // never render errors to the client
+ini_set('log_errors', '1');             // ensure errors are logged
 error_reporting(E_ALL);
 
-// 2. Autoload Composer
+// 2) Force JSON responses by default (safe for APIs)
+header('Content-Type: application/json; charset=utf-8');
+
+// 3) Autoload Composer
 $autoloadPath = __DIR__ . '/vendor/autoload.php';
-if (file_exists($autoloadPath)) {
-    require_once $autoloadPath;
-} else {
+
+if (!is_file($autoloadPath)) {
     http_response_code(500);
-    echo json_encode(['error' => 'Autoload file missing']);
+    echo json_encode([
+        'error'   => 'Server misconfiguration',
+        'message' => 'Composer autoload file missing. Run composer install.',
+    ]);
     exit;
 }
+
+require_once $autoloadPath;
+
 
 // 3. Load .env manually
 $envPath = __DIR__ . '/.env';
