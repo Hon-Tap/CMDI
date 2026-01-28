@@ -94,13 +94,23 @@ export default function NewsPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    (async () => {
+    const fetchNews = async () => {
       try {
         setFetchState({ loading: true, error: '' });
-        const res = await fetch('http://127.0.0.1:8000/api/news', { signal: controller.signal });
+
+        const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(
+          /\/$/,
+          ''
+        );
+
+        const res = await fetch(`${API_BASE}/api/news`, { signal: controller.signal });
+
         if (!res.ok) throw new Error('Failed to load news updates.');
 
-        const data: NewsItem[] = await res.json();
+        const json = await res.json();
+
+        // Support: {data:[...]} OR raw array OR {success:true,data:[...]}
+        const data: NewsItem[] = (json?.data || (Array.isArray(json) ? json : [])) as NewsItem[];
 
         // Sort newest first (safe)
         const sorted = [...data].sort(
@@ -113,7 +123,9 @@ export default function NewsPage() {
         if (err?.name === 'AbortError') return;
         setFetchState({ loading: false, error: err?.message || 'Something went wrong.' });
       }
-    })();
+    };
+
+    fetchNews();
 
     return () => controller.abort();
   }, []);
@@ -158,11 +170,7 @@ export default function NewsPage() {
             <div className={styles.stateCard}>
               <h2 className={styles.stateTitle}>Couldn’t load updates</h2>
               <p className={styles.stateText}>{fetchState.error}</p>
-              <button
-                className={styles.stateBtn}
-                onClick={() => window.location.reload()}
-                type="button"
-              >
+              <button className={styles.stateBtn} onClick={() => window.location.reload()} type="button">
                 Refresh <ArrowRight size={18} />
               </button>
             </div>
@@ -171,9 +179,7 @@ export default function NewsPage() {
           {!fetchState.loading && !fetchState.error && news.length === 0 && (
             <div className={styles.stateCard}>
               <h2 className={styles.stateTitle}>No updates yet</h2>
-              <p className={styles.stateText}>
-                News articles will appear here once they are published.
-              </p>
+              <p className={styles.stateText}>News articles will appear here once they are published.</p>
             </div>
           )}
 
@@ -207,11 +213,7 @@ export default function NewsPage() {
                     {(featured.content || '').length > 220 ? '…' : ''}
                   </p>
 
-                  <button
-                    className={styles.primaryBtn}
-                    onClick={() => openModal(featured)}
-                    type="button"
-                  >
+                  <button className={styles.primaryBtn} onClick={() => openModal(featured)} type="button">
                     Read Story <ArrowRight size={18} />
                   </button>
                 </div>
