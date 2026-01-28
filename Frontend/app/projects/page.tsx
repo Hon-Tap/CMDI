@@ -36,10 +36,21 @@ export default function ProjectsPage() {
         setLoading(true);
         setError(false);
 
-        const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(
-          /\/$/,
-          ''
-        );
+        const API_BASE = (() => {
+          const raw = process.env.NEXT_PUBLIC_API_BASE_URL;
+        
+          // In production builds, fail fast if the env var is missing
+          if (!raw && process.env.NODE_ENV === 'production') {
+            throw new Error('Missing NEXT_PUBLIC_API_BASE_URL in production deployment');
+          }
+        
+          // In dev, allow localhost fallback
+          const base = (raw ?? 'http://127.0.0.1:8000').trim();
+        
+          // Remove trailing slash if present
+          return base.replace(/\/$/, '');
+        })();
+
 
         const res = await fetch(`${API_BASE}/api/projects`, {
           method: 'GET',
