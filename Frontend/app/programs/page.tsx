@@ -52,16 +52,20 @@ export default function ProgramsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'http://127.0.0.1:8000';
+  const apiBase = (() => {
+  const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
-  const stats = useMemo(
-    () => [
-      { value: '15k+', label: 'Lives Impacted' },
-      { value: '42', label: 'Boreholes Functional' },
-    ],
-    []
-  );
+  // Fail fast in production so you never ship a localhost call
+  if (!raw && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_API_BASE_URL is missing in this production deployment');
+  }
+
+  // Allow localhost only in dev
+  const base = raw ?? 'http://127.0.0.1:8000';
+
+  return base.replace(/\/$/, '');
+})();
+
 
   const fetchPrograms = async () => {
     setLoading(true);
