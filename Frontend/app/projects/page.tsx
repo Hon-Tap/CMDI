@@ -17,11 +17,11 @@ const getIcon = (category: string) => {
 };
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  
+
   // 1. HYDRATION FIX: Ensures the component only renders content once on the client.
   // This prevents the "Server-rendered HTML didn't match" error.
   const [hasMounted, setHasMounted] = useState(false);
@@ -29,42 +29,55 @@ export default function ProjectsPage() {
   useEffect(() => {
     setHasMounted(true);
 
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
-      
-      const res = await fetch(`${API_BASE}/api/projects`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
+    const ctrl = new AbortController();
+
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(
+          /\/$/,
+          ''
+        );
+
+        const res = await fetch(`${API_BASE}/api/projects`, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          signal: ctrl.signal,
+        });
 
         if (!res.ok) throw new Error('Could not reach backend');
-        
+
         const json = await res.json();
         const data = json?.data || (Array.isArray(json) ? json : []);
         setProjects(data);
-
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error('Backend connection error:', err);
+          setError(true);
         }
-      } catch (err) {
-        console.error("Backend connection error:", err);
-        setError(true);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProjects();
+
+    return () => ctrl.abort();
   }, []);
 
   // Exit early if the component hasn't mounted in the browser yet.
   if (!hasMounted) return null;
 
   // Filter Logic: Compares status from database (e.g., "Ongoing", "active") to the filter buttons.
-  const filteredProjects = filter === 'All' 
-    ? projects 
-    : projects.filter((p: any) => p.status?.toLowerCase() === filter.toLowerCase());
+  const filteredProjects =
+    filter === 'All'
+      ? projects
+      : projects.filter((p: any) => p.status?.toLowerCase() === filter.toLowerCase());
 
   return (
     <main className={styles.page}>
-      
       {/* 1. HERO SECTION */}
       <section className={styles.hero}>
         <div className={styles.heroOverlay}></div>
@@ -81,7 +94,7 @@ export default function ProjectsPage() {
         <div className={styles.container}>
           <div className={styles.filterContainer}>
             {['All', 'Ongoing', 'Completed', 'Planning'].map((cat) => (
-              <button 
+              <button
                 key={cat}
                 onClick={() => setFilter(cat)}
                 className={`${styles.filterBtn} ${filter === cat ? styles.filterBtnActive : ''}`}
@@ -96,7 +109,6 @@ export default function ProjectsPage() {
       {/* 3. PROJECT GRID */}
       <section className={styles.gridSection}>
         <div className={styles.container}>
-          
           {/* Loading View */}
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>
@@ -110,7 +122,7 @@ export default function ProjectsPage() {
               <AlertCircle size={48} style={{ margin: '0 auto 1rem' }} />
               <p style={{ fontWeight: 'bold' }}>Backend Connection Failed</p>
               <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                Check that your PHP server is running at: <code>php -S 127.0.0.1:8000 index.php</code>
+                Check that your backend is reachable and the API base URL is correct.
               </p>
             </div>
           )}
@@ -120,16 +132,16 @@ export default function ProjectsPage() {
             <div className={styles.projectGrid}>
               {filteredProjects.length > 0 ? (
                 filteredProjects.map((project: any, index: number) => (
-                  <div 
-                    key={project.id} 
-                    className={styles.projectCard} 
+                  <div
+                    key={project.id ?? index}
+                    className={styles.projectCard}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className={styles.imageWrapper}>
-                      <Image 
-                        src={project.image_url || "/images/projects/project-edu.jpeg"} 
-                        alt={project.title} 
-                        fill 
+                      <Image
+                        src={project.image_url || '/images/projects/project-edu.jpeg'}
+                        alt={project.title}
+                        fill
                         className={styles.cardImg}
                         unoptimized // Bypasses external image domain restrictions for development
                       />
@@ -137,23 +149,32 @@ export default function ProjectsPage() {
                     </div>
 
                     <div className={styles.cardContent}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '0.5rem',
+                        }}
+                      >
                         <span className={styles.categoryTag}>{project.location || 'South Sudan'}</span>
                         <span style={{ color: '#94a3b8' }}>{getIcon(project.title)}</span>
                       </div>
-                      
+
                       <h3 className={styles.cardTitle}>{project.title}</h3>
                       <p className={styles.cardDesc}>{project.description}</p>
-                      
+
                       <div className={styles.fundingMeta}>
                         <div className={styles.fundingInfo}>
                           <span>Progress</span>
                           <span>{project.status?.toLowerCase() === 'completed' ? '100%' : '65%'}</span>
                         </div>
                         <div className={styles.progressBarBg}>
-                          <div 
-                            className={styles.progressBarFill} 
-                            style={{ width: project.status?.toLowerCase() === 'completed' ? '100%' : '65%' }}
+                          <div
+                            className={styles.progressBarFill}
+                            style={{
+                              width: project.status?.toLowerCase() === 'completed' ? '100%' : '65%',
+                            }}
                           ></div>
                         </div>
                       </div>
@@ -161,7 +182,9 @@ export default function ProjectsPage() {
                   </div>
                 ))
               ) : (
-                <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '3rem', opacity: 0.5 }}>
+                <div
+                  style={{ textAlign: 'center', gridColumn: '1/-1', padding: '3rem', opacity: 0.5 }}
+                >
                   <p>No projects currently match this filter.</p>
                 </div>
               )}
