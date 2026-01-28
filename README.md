@@ -25,3 +25,4 @@ The project is split into two main environments:
 ```bash
 git clone [https://github.com/your-username/CMDI.git](https://github.com/your-username/CMDI.git)
 cd CMDI
+deploy test
