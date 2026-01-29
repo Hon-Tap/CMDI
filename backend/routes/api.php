@@ -12,18 +12,20 @@ use App\Http\Controllers\PartnerController;
 
 /*
 |--------------------------------------------------------------------------
-| Request Normalization
+| Request Normalization (Robust Version)
 |--------------------------------------------------------------------------
 */
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$path   = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$rawPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
-// Normalize trailing slashes
-$uri = rtrim($path, '/');
+// 1. Remove index.php from the path if it exists
+$uri = str_replace('/index.php', '', $rawPath);
+
+// 2. Remove trailing slashes
+$uri = rtrim($uri, '/');
+
+// 3. Ensure empty path is treated as root
 if ($uri === '') $uri = '/';
-
-// IMPORTANT: treat /index.php same as /
-if ($uri === '/index.php') $uri = '/';
 
 /*
 |--------------------------------------------------------------------------
