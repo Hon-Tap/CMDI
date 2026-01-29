@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { X, Calendar, Clock, ArrowRight } from 'lucide-react';
+import { X, Calendar, Clock, ArrowRight, Loader2 } from 'lucide-react';
 import styles from './news.module.css';
 
 interface NewsItem {
@@ -22,13 +22,12 @@ export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [fetchState, setFetchState] = useState<FetchState>({ loading: true, error: '' });
 
-  // Modal
+  // Modal State
   const [selected, setSelected] = useState<NewsItem | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
 
-  // ✅ Use ONLY your current 3 local images (you’ll update later)
-  // NOTE: your filenames contain spaces, so we URL-encode them with %20
+  // Local Image Mapping
   const LOCAL_IMAGES = useMemo(
     () => ({
       hero: '/images/news/news-hero.jpeg',
@@ -39,8 +38,12 @@ export default function NewsPage() {
   );
 
   const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'Recent Update';
+    }
   };
 
   const estimateReadTime = (text: string) => {
@@ -49,7 +52,6 @@ export default function NewsPage() {
     return `${minutes} min read`;
   };
 
-  // Override images for now (featured = hero, others alternate between the two images)
   const resolveImage = (item: NewsItem, indexInList: number, isFeatured: boolean) => {
     if (isFeatured) return LOCAL_IMAGES.hero;
     return indexInList % 2 === 0 ? LOCAL_IMAGES.alt1 : LOCAL_IMAGES.alt2;
@@ -58,38 +60,21 @@ export default function NewsPage() {
   const openModal = (item: NewsItem) => {
     setSelected(item);
     setIsClosing(false);
-    document.body.style.overflow = 'hidden';
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+    }
   };
 
   const closeModal = () => {
     setIsClosing(true);
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-
     closeTimerRef.current = window.setTimeout(() => {
       setSelected(null);
       setIsClosing(false);
-      document.body.style.overflow = 'auto';
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = 'auto';
+      }
     }, 220);
   };
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-      document.body.style.overflow = 'auto';
-    };
-  }, []);
-
-  // ESC closes modal
-  useEffect(() => {
-    if (!selected) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeModal();
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,21 +83,19 @@ export default function NewsPage() {
       try {
         setFetchState({ loading: true, error: '' });
 
-        const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(
-          /\/$/,
-          ''
-        );
+        // BUILD-SAFE API BASE
+        const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
 
-        const res = await fetch(`${API_BASE}/api/news`, { signal: controller.signal });
+        const res = await fetch(`${API_BASE}/api/news`, { 
+          signal: controller.signal,
+          cache: 'no-store' 
+        });
 
         if (!res.ok) throw new Error('Failed to load news updates.');
 
         const json = await res.json();
-
-        // Support: {data:[...]} OR raw array OR {success:true,data:[...]}
         const data: NewsItem[] = (json?.data || (Array.isArray(json) ? json : [])) as NewsItem[];
 
-        // Sort newest first (safe)
         const sorted = [...data].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
@@ -126,8 +109,13 @@ export default function NewsPage() {
     };
 
     fetchNews();
-
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = 'auto';
+      }
+    };
   }, []);
 
   const featured = news[0] || null;
@@ -135,34 +123,23 @@ export default function NewsPage() {
 
   return (
     <main className={styles.page}>
-      {/* =========================
-          HERO
-      ========================= */}
+      {/* 1) HERO */}
       <section className={styles.hero}>
         <div className={styles.heroInner}>
           <div className={styles.heroEyebrow}>NEWS & UPDATES</div>
           <h1 className={styles.heroTitle}>Stories from the Field</h1>
           <p className={styles.heroLead}>
-            Follow our latest progress, community milestones, and real updates from the ground in South
-            Sudan.
+            Follow our latest progress and community milestones from the ground in South Sudan.
           </p>
         </div>
       </section>
 
-      {/* =========================
-          CONTENT
-      ========================= */}
+      {/* 2) CONTENT */}
       <section className={styles.section}>
         <div className={styles.container}>
-          {/* Loading / Error / Empty */}
           {fetchState.loading && (
-            <div className={styles.skeletonWrap}>
-              <div className={styles.skeletonFeatured} />
-              <div className={styles.skeletonGrid}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className={styles.skeletonCard} />
-                ))}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>
+              <Loader2 className="animate-spin" size={48} color="#00aeef" />
             </div>
           )}
 
@@ -170,20 +147,13 @@ export default function NewsPage() {
             <div className={styles.stateCard}>
               <h2 className={styles.stateTitle}>Couldn’t load updates</h2>
               <p className={styles.stateText}>{fetchState.error}</p>
-              <button className={styles.stateBtn} onClick={() => window.location.reload()} type="button">
+              <button className={styles.stateBtn} onClick={() => window.location.reload()}>
                 Refresh <ArrowRight size={18} />
               </button>
             </div>
           )}
 
-          {!fetchState.loading && !fetchState.error && news.length === 0 && (
-            <div className={styles.stateCard}>
-              <h2 className={styles.stateTitle}>No updates yet</h2>
-              <p className={styles.stateText}>News articles will appear here once they are published.</p>
-            </div>
-          )}
-
-          {/* Featured */}
+          {/* Featured Story */}
           {!fetchState.loading && !fetchState.error && featured && (
             <div className={styles.featuredWrap}>
               <div className={styles.featuredCard}>
@@ -193,27 +163,21 @@ export default function NewsPage() {
                     alt={featured.title}
                     fill
                     priority
-                    sizes="(max-width: 960px) 100vw, 60vw"
                     className={styles.imgCover}
                   />
                 </div>
-
                 <div className={styles.featuredBody}>
                   <div className={styles.badgeRow}>
                     <span className={styles.badge}>{formatDate(featured.created_at)}</span>
                     <span className={styles.metaInline}>
-                      <Clock size={16} />
-                      {estimateReadTime(featured.content)}
+                      <Clock size={16} /> {estimateReadTime(featured.content)}
                     </span>
                   </div>
-
                   <h2 className={styles.featuredTitle}>{featured.title}</h2>
                   <p className={styles.featuredExcerpt}>
-                    {(featured.content || '').slice(0, 220)}
-                    {(featured.content || '').length > 220 ? '…' : ''}
+                    {featured.content?.slice(0, 220)}...
                   </p>
-
-                  <button className={styles.primaryBtn} onClick={() => openModal(featured)} type="button">
+                  <button className={styles.primaryBtn} onClick={() => openModal(featured)}>
                     Read Story <ArrowRight size={18} />
                   </button>
                 </div>
@@ -223,110 +187,60 @@ export default function NewsPage() {
 
           {/* Latest Grid */}
           {!fetchState.loading && !fetchState.error && latest.length > 0 && (
-            <>
-              <div className={styles.gridHeader}>
-                <h3 className={styles.gridTitle}>Latest Updates</h3>
-                <p className={styles.gridLead}>
-                  Short, clear updates on education, WASH, protection, and emergency response.
-                </p>
-              </div>
-
-              <div className={styles.grid}>
-                {latest.map((post, idx) => (
-                  <article key={post.id} className={styles.card}>
-                    <button
-                      className={styles.cardClick}
-                      onClick={() => openModal(post)}
-                      type="button"
-                      aria-label={`Open: ${post.title}`}
-                    >
-                      <div className={styles.cardMedia}>
-                        <Image
-                          src={resolveImage(post, idx, false)}
-                          alt={post.title}
-                          fill
-                          sizes="(max-width: 960px) 100vw, 33vw"
-                          className={styles.imgCover}
-                        />
+            <div className={styles.grid}>
+              {latest.map((post, idx) => (
+                <article key={post.id} className={styles.card}>
+                  <button className={styles.cardClick} onClick={() => openModal(post)}>
+                    <div className={styles.cardMedia}>
+                      <Image
+                        src={resolveImage(post, idx, false)}
+                        alt={post.title}
+                        fill
+                        className={styles.imgCover}
+                      />
+                    </div>
+                    <div className={styles.cardBody}>
+                      <div className={styles.cardMeta}>
+                        <span className={styles.badgeSm}>{formatDate(post.created_at)}</span>
                       </div>
-
-                      <div className={styles.cardBody}>
-                        <div className={styles.cardMeta}>
-                          <span className={styles.badgeSm}>{formatDate(post.created_at)}</span>
-                          <span className={styles.metaInline}>
-                            <Clock size={15} />
-                            {estimateReadTime(post.content)}
-                          </span>
-                        </div>
-
-                        <h4 className={styles.cardTitle}>{post.title}</h4>
-                        <p className={styles.cardExcerpt}>
-                          {(post.content || '').slice(0, 130)}
-                          {(post.content || '').length > 130 ? '…' : ''}
-                        </p>
-
-                        <div className={styles.cardAction}>
-                          Read Story <ArrowRight size={18} />
-                        </div>
+                      <h4 className={styles.cardTitle}>{post.title}</h4>
+                      <p className={styles.cardExcerpt}>{post.content?.slice(0, 100)}...</p>
+                      <div className={styles.cardAction}>
+                        Read Story <ArrowRight size={18} />
                       </div>
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </>
+                    </div>
+                  </button>
+                </article>
+              ))}
+            </div>
           )}
         </div>
       </section>
 
-      {/* =========================
-          MODAL
-      ========================= */}
+      {/* 3) MODAL */}
       {selected && (
-        <div
+        <div 
           className={`${styles.modalOverlay} ${isClosing ? styles.isClosing : ''}`}
-          role="dialog"
-          aria-modal="true"
-          aria-label="News article"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeModal();
-          }}
+          onClick={(e) => e.target === e.currentTarget && closeModal()}
         >
           <div className={`${styles.modalContent} ${isClosing ? styles.isClosing : ''}`}>
-            <button className={styles.closeBtn} onClick={closeModal} aria-label="Close">
-              <X size={20} />
-            </button>
-
+            <button className={styles.closeBtn} onClick={closeModal}><X size={20} /></button>
             <div className={styles.modalHero}>
               <Image
                 src={featured && selected.id === featured.id ? LOCAL_IMAGES.hero : LOCAL_IMAGES.alt1}
                 alt={selected.title}
                 fill
-                sizes="100vw"
                 className={styles.imgCover}
               />
             </div>
-
             <div className={styles.modalBody}>
               <div className={styles.modalMeta}>
-                <span className={styles.modalMetaItem}>
-                  <Calendar size={16} />
-                  {formatDate(selected.created_at)}
-                </span>
-                <span className={styles.modalMetaItem}>
-                  <Clock size={16} />
-                  {estimateReadTime(selected.content)}
-                </span>
+                <span><Calendar size={16} /> {formatDate(selected.created_at)}</span>
+                <span><Clock size={16} /> {estimateReadTime(selected.content)}</span>
               </div>
-
               <h2 className={styles.modalTitle}>{selected.title}</h2>
-
               <div className={styles.modalText}>
-                {(selected.content || '')
-                  .split('\n')
-                  .filter((p) => p.trim().length)
-                  .map((paragraph, i) => (
-                    <p key={i}>{paragraph}</p>
-                  ))}
+                {selected.content?.split('\n').map((p, i) => <p key={i}>{p}</p>)}
               </div>
             </div>
           </div>
