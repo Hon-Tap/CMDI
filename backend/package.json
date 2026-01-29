@@ -1,17 +1,19 @@
 {
-  "name": "cmdi-backend",
-  "version": "1.0.0",
-  "private": true,
-  "description": "CMDI PHP API backend",
-  "type": "commonjs",
-  "scripts": {
-    "serve": "php -S localhost:8000 -t public",
-    "lint": "echo \"No linter configured\""
+  "name": "cmdi/backend",
+  "type": "project",
+  "description": "CMDI PHP Backend",
+  "require": {
+    "php": "^8.2",
+    "ext-pdo": "*",
+    "ext-pdo_pgsql": "*"
   },
-  "dependencies": {
-    "pg": "^8.16.3"
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
   },
-  "devDependencies": {
-    "@types/pg": "^8.16.0"
+  "config": {
+    "optimize-autoloader": true,
+    "allow-plugins": {}
   }
 }
