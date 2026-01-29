@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './programs.module.css';
 import {
@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
+// --- Types ---
 type Program = {
   id?: number | string;
   title?: string;
@@ -25,18 +26,21 @@ type ApiResponse =
   | { status?: string; data?: Program[] }
   | Program[];
 
+// --- Mock Stats (Added back as they were in your previous version) ---
+const stats = [
+  { label: 'Communities Served', value: '45+' },
+  { label: 'Clean Water Points', value: '120+' },
+  { label: 'Active Students', value: '3,200+' },
+];
+
+// --- Components ---
 const IconComponent = ({ name, size = 32 }: { name?: string; size?: number }) => {
   switch (name) {
-    case 'Droplets':
-      return <Droplets size={size} />;
-    case 'BookOpen':
-      return <BookOpen size={size} />;
-    case 'Sprout':
-      return <Sprout size={size} />;
-    case 'ShieldCheck':
-      return <ShieldCheck size={size} />;
-    default:
-      return <Zap size={size} />;
+    case 'Droplets': return <Droplets size={size} />;
+    case 'BookOpen': return <BookOpen size={size} />;
+    case 'Sprout': return <Sprout size={size} />;
+    case 'ShieldCheck': return <ShieldCheck size={size} />;
+    default: return <Zap size={size} />;
   }
 };
 
@@ -52,20 +56,8 @@ export default function ProgramsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
-  const apiBase = (() => {
-  const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-
-  // Fail fast in production so you never ship a localhost call
-  if (!raw && process.env.NODE_ENV === 'production') {
-    throw new Error('NEXT_PUBLIC_API_BASE_URL is missing in this production deployment');
-  }
-
-  // Allow localhost only in dev
-  const base = raw ?? 'http://127.0.0.1:8000';
-
-  return base.replace(/\/$/, '');
-})();
-
+  // SAFE API LOGIC: No more 'throw new Error' during build
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
 
   const fetchPrograms = async () => {
     setLoading(true);
@@ -75,7 +67,7 @@ export default function ProgramsPage() {
       const res = await fetch(`${apiBase}/api/programs`, { cache: 'no-store' });
 
       if (!res.ok) {
-        throw new Error(`Server responded with status: ${res.status}`);
+        throw new Error(`Server status: ${res.status}`);
       }
 
       const result = (await res.json()) as ApiResponse;
@@ -87,11 +79,8 @@ export default function ProgramsPage() {
 
       setPrograms(dataArray);
     } catch (err: any) {
-      console.error('Failed to fetch programs:', err);
-      setPrograms([]);
-      setError(
-        'Could not connect to the API. Ensure your backend is running and the API base URL is correct.'
-      );
+      console.error('Fetch Error:', err);
+      setError('Connection failed. Please check your internet or retry below.');
     } finally {
       setLoading(false);
     }
@@ -99,7 +88,6 @@ export default function ProgramsPage() {
 
   useEffect(() => {
     fetchPrograms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -109,17 +97,14 @@ export default function ProgramsPage() {
         <div className={styles.container}>
           <div className={`${styles.heroContent} ${styles.animate}`}>
             <span className={styles.eyebrow}>What We Do</span>
-
             <h1 className={styles.heroTitle}>
               Strategic <span className={styles.heroHighlight}>Solutions</span> for South Sudan.
             </h1>
-
             <p className={styles.heroDescription}>
               Our programs are designed with communities in Fangak County to address immediate needs
               while building long-term resilience.
             </p>
-
-            <div className={styles.heroStats} aria-label="Key program statistics">
+            <div className={styles.heroStats}>
               {stats.map((s) => (
                 <div key={s.label} className={styles.statItem}>
                   <h3>{s.value}</h3>
@@ -135,19 +120,17 @@ export default function ProgramsPage() {
       <section className={styles.pillarSection}>
         <div className={styles.container}>
           {loading && (
-            <div className={styles.statusMessage} role="status" aria-live="polite">
-              <div className={styles.spinner} aria-hidden="true" />
+            <div className={styles.statusMessage}>
+              <div className={styles.spinner} />
               <p>Loading programs...</p>
             </div>
           )}
 
           {!loading && error && (
-            <div className={styles.errorMessage} role="alert">
+            <div className={styles.errorMessage}>
               <AlertCircle size={40} />
               <p>{error}</p>
-              <button type="button" onClick={fetchPrograms} className={styles.retryBtn}>
-                Retry Connection
-              </button>
+              <button onClick={fetchPrograms} className={styles.retryBtn}>Retry Connection</button>
             </div>
           )}
 
@@ -157,41 +140,25 @@ export default function ProgramsPage() {
                 programs.map((prog, idx) => {
                   const title = prog?.title?.trim() || 'Program';
                   const theme = colorMap[title] || { bg: '#f8fafc', icon: '#00aeef' };
-
-                  const filter = encodeURIComponent((prog?.title || '').toLowerCase());
+                  const filter = encodeURIComponent(title.toLowerCase());
 
                   return (
                     <div
-                      key={prog?.id ?? `${title}-${idx}`}
+                      key={prog?.id ?? idx}
                       className={`${styles.pillarCard} ${styles.animate}`}
-                      style={{ animationDelay: `${idx * 0.08}s` }}
+                      style={{ animationDelay: `${idx * 0.1}s` }}
                     >
-                      <div
-                        className={styles.pillarIcon}
-                        style={{ background: theme.bg, color: theme.icon }}
-                        aria-hidden="true"
-                      >
+                      <div className={styles.pillarIcon} style={{ background: theme.bg, color: theme.icon }}>
                         <IconComponent name={prog?.icon_name} />
                       </div>
-
                       <h2 className={styles.pillarTitle}>{title}</h2>
-
                       <p className={styles.pillarDescription}>
-                        {prog?.description ||
-                          'We deliver practical, community-led support that strengthens children and families.'}
+                        {prog?.description || 'Community-led support strengthening children and families.'}
                       </p>
-
-                      <ul className={styles.pillarList} aria-label={`${title} delivery principles`}>
-                        <li>
-                          <CheckCircle2 size={16} color={theme.icon} />
-                          Community-led delivery
-                        </li>
-                        <li>
-                          <CheckCircle2 size={16} color={theme.icon} />
-                          Sustainable impact
-                        </li>
+                      <ul className={styles.pillarList}>
+                        <li><CheckCircle2 size={16} color={theme.icon} /> Community-led delivery</li>
+                        <li><CheckCircle2 size={16} color={theme.icon} /> Sustainable impact</li>
                       </ul>
-
                       <Link href={`/projects?filter=${filter}`} className={styles.pillarLink}>
                         View Active Projects <ArrowRight size={20} />
                       </Link>
@@ -199,7 +166,7 @@ export default function ProgramsPage() {
                   );
                 })
               ) : (
-                <p className={styles.emptyState}>No programs found in the database.</p>
+                <p className={styles.emptyState}>No programs available at this time.</p>
               )}
             </div>
           )}
@@ -211,30 +178,20 @@ export default function ProgramsPage() {
         <div className={styles.container}>
           <div className={styles.centeredHeader}>
             <h2 className={styles.sectionHeading}>The CMDI Method</h2>
-            <p className={styles.sectionSubheading}>
-              A practical framework for accountable and sustainable delivery.
-            </p>
+            <p className={styles.sectionSubheading}>A practical framework for accountable delivery.</p>
           </div>
-
           <div className={styles.approachStep}>
             <div className={styles.stepNumber}>01</div>
             <div>
               <h3 className={styles.stepTitle}>Community Co-Design</h3>
-              <p className={styles.stepText}>
-                We do not bring pre-packaged solutions. Each program begins with community
-                consultation to ensure we solve the priorities people identify.
-              </p>
+              <p className={styles.stepText}>We solve the priorities people identify through deep consultation.</p>
             </div>
           </div>
-
           <div className={styles.approachStep}>
             <div className={styles.stepNumber}>02</div>
             <div>
               <h3 className={styles.stepTitle}>Accountable Logistics</h3>
-              <p className={styles.stepText}>
-                Operating in remote areas requires local expertise. Our field team ensures supplies
-                reach hard-to-access communities safely and transparently.
-              </p>
+              <p className={styles.stepText}>Local expertise ensuring supplies reach remote areas transparently.</p>
             </div>
           </div>
         </div>
@@ -244,23 +201,11 @@ export default function ProgramsPage() {
       <section className={styles.ctaWrapper}>
         <div className={styles.container}>
           <div className={styles.ctaCard}>
-            <Zap size={48} className={styles.ctaIcon} aria-hidden="true" />
-
+            <Zap size={48} className={styles.ctaIcon} />
             <h2 className={styles.ctaTitle}>Support a Program Today</h2>
-
-            <p className={styles.ctaText}>
-              Your support helps us expand these pillars to more counties across South Sudan—faster,
-              safer, and with stronger accountability.
-            </p>
-
             <div className={styles.ctaButtons}>
-              <Link href="/donate" className={styles.btnPrimary}>
-                Donate Now <ArrowRight size={18} />
-              </Link>
-
-              <Link href="/partner-with-us" className={styles.btnOutline}>
-                Partner With Us <ArrowRight size={18} />
-              </Link>
+              <Link href="/donate" className={styles.btnPrimary}>Donate Now <ArrowRight size={18} /></Link>
+              <Link href="/partner-with-us" className={styles.btnOutline}>Partner <ArrowRight size={18} /></Link>
             </div>
           </div>
         </div>
