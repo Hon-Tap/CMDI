@@ -8,13 +8,11 @@ const nextConfig = {
       },
     ],
   },
-  // These two blocks allow the build to finish even with errors
   typescript: {
+    // This bypasses the "Running TypeScript" hang/error
     ignoreBuildErrors: true, 
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Note: ESLint block removed to prevent the "Unrecognized key" warning
 };
 
 export default nextConfig;
