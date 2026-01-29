@@ -39,9 +39,11 @@ export default function ContactPage() {
     type: '',
   });
 
-  // ✅ change this to your deployed API later:
-  // e.g. process.env.NEXT_PUBLIC_API_BASE_URL + '/api/contact'
-  const endpoint = useMemo(() => 'http://127.0.0.1:8000/api/contact', []);
+  // BUILD-SAFE API ENDPOINT
+  const endpoint = useMemo(() => {
+    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
+    return `${base}/api/contact`;
+  }, []);
 
   const onChange =
     (key: keyof ContactForm) =>
@@ -59,13 +61,14 @@ export default function ContactPage() {
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(formData),
       });
 
-      // Protect against non-JSON error responses
-      const text = await res.text();
-      const result = text ? JSON.parse(text) : {};
+      const result = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(result?.error || result?.message || 'Failed to send message.');
@@ -77,6 +80,7 @@ export default function ContactPage() {
         type: 'success',
       });
 
+      // Clear form on success
       setFormData({
         full_name: '',
         email: '',
@@ -84,9 +88,10 @@ export default function ContactPage() {
         message: '',
       });
     } catch (err: any) {
+      console.error('Submission error:', err);
       setStatus({
         loading: false,
-        message: err?.message || 'Something went wrong. Please try again.',
+        message: err?.message || 'Something went wrong. Please try again later.',
         type: 'error',
       });
     }
@@ -94,66 +99,54 @@ export default function ContactPage() {
 
   return (
     <main className={styles.page}>
-      {/* HERO */}
+      {/* 1) HERO */}
       <section className={styles.hero}>
         <div className={styles.heroOverlay} />
         <div className={styles.heroContent}>
           <p className={styles.heroKicker}>Contact</p>
           <h1 className={styles.heroTitle}>Let’s talk</h1>
           <p className={styles.heroSubtitle}>
-            Questions, partnerships, volunteering, or support — send us a message and we’ll respond.
+            Questions, partnerships, or support — send us a message and we’ll respond.
           </p>
         </div>
       </section>
 
-      {/* MAIN */}
+      {/* 2) MAIN CONTENT */}
       <section className={styles.contactSection}>
         <div className={styles.container}>
           <div className={styles.contactGrid}>
-            {/* LEFT: INFO */}
+            
+            {/* LEFT: INFO SIDEBAR */}
             <aside className={styles.infoSidebar}>
               <div className={styles.infoCard}>
-                <div className={styles.iconWrapper}>
-                  <Mail size={22} />
-                </div>
+                <div className={styles.iconWrapper}><Mail size={22} /></div>
                 <div className={styles.infoText}>
                   <h3>Email</h3>
                   <a href="mailto:info@cmdi-ss.org">info@cmdi-ss.org</a>
-                  <p>We reply as soon as possible.</p>
                 </div>
               </div>
 
               <div className={styles.infoCard}>
-                <div className={styles.iconWrapper}>
-                  <Phone size={22} />
-                </div>
+                <div className={styles.iconWrapper}><Phone size={22} /></div>
                 <div className={styles.infoText}>
                   <h3>Phone</h3>
                   <a href="tel:+211000000000">+211 000 000 000</a>
-                  <p>Weekdays, 9am – 5pm.</p>
                 </div>
               </div>
 
               <div className={styles.infoCard}>
-                <div className={styles.iconWrapper}>
-                  <MapPin size={22} />
-                </div>
+                <div className={styles.iconWrapper}><MapPin size={22} /></div>
                 <div className={styles.infoText}>
                   <h3>Location</h3>
                   <p>Juba, South Sudan</p>
-                  <p>We work across communities.</p>
                 </div>
               </div>
 
               <div className={styles.sideCallout}>
-                <div className={styles.sideCalloutIcon}>
-                  <Heart size={18} />
-                </div>
+                <div className={styles.sideCalloutIcon}><Heart size={18} /></div>
                 <div className={styles.sideCalloutText}>
-                  <h4>Want to partner with us?</h4>
-                  <p>
-                    Select <strong>Partnership Proposal</strong> and share what you have in mind.
-                  </p>
+                  <h4>Want to partner?</h4>
+                  <p>Select <strong>Partnership Proposal</strong> and we'll prioritize your inquiry.</p>
                 </div>
               </div>
             </aside>
@@ -161,9 +154,7 @@ export default function ContactPage() {
             {/* RIGHT: FORM */}
             <div className={styles.formWrapper}>
               <div className={styles.formHeader}>
-                <div className={styles.formHeaderIcon}>
-                  <MessageSquare size={18} />
-                </div>
+                <div className={styles.formHeaderIcon}><MessageSquare size={18} /></div>
                 <div>
                   <h2>Send a Message</h2>
                   <p>Fill in the form below and we’ll reach out.</p>
@@ -176,7 +167,6 @@ export default function ContactPage() {
                     status.type === 'success' ? styles.alertSuccess : styles.alertError
                   }`}
                   role="status"
-                  aria-live="polite"
                 >
                   {status.message}
                 </div>
@@ -192,7 +182,6 @@ export default function ContactPage() {
                       value={formData.full_name}
                       onChange={onChange('full_name')}
                       placeholder="Your name..."
-                      autoComplete="name"
                       required
                     />
                   </div>
@@ -205,7 +194,6 @@ export default function ContactPage() {
                       value={formData.email}
                       onChange={onChange('email')}
                       placeholder="youremail@example.com"
-                      autoComplete="email"
                       required
                     />
                   </div>
@@ -215,9 +203,7 @@ export default function ContactPage() {
                   <label htmlFor="subject">Subject / Interest</label>
                   <select id="subject" value={formData.subject} onChange={onChange('subject')}>
                     {SUBJECTS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
+                      <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
                 </div>
@@ -238,12 +224,9 @@ export default function ContactPage() {
                   <span>{status.loading ? 'Sending...' : 'Send Message'}</span>
                   <Send size={18} />
                 </button>
-
-                <p className={styles.formFootnote}>
-                  By sending this message, you agree to be contacted back by CMDI.
-                </p>
               </form>
             </div>
+
           </div>
         </div>
       </section>
