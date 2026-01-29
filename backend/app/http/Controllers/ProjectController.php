@@ -11,28 +11,7 @@ final class ProjectController
     {
         json([
             'success' => true,
-            'message' => 'Projects fetched',
             'data'    => Project::all()
-        ]);
-    }
-
-    public function show(): void
-    {
-        $id = (int)($_GET['id'] ?? 0);
-
-        if ($id <= 0) {
-            json(['success' => false, 'message' => 'Invalid project id'], 400);
-        }
-
-        $project = Project::find($id);
-
-        if (!$project) {
-            json(['success' => false, 'message' => 'Project not found'], 404);
-        }
-
-        json([
-            'success' => true,
-            'data'    => $project
         ]);
     }
 
@@ -45,51 +24,16 @@ final class ProjectController
         }
 
         $project = Project::create($payload);
-
-        json([
-            'success' => true,
-            'message' => 'Project created',
-            'data'    => $project
-        ], 201);
+        json(['success' => true, 'data' => $project], 201);
     }
 
-    public function update(): void
-    {
-        $id = (int)($_GET['id'] ?? 0);
-        $payload = json_decode(file_get_contents('php://input'), true);
-
-        if ($id <= 0 || !$payload) {
-            json(['success' => false, 'message' => 'Invalid request'], 400);
-        }
-
-        $updated = Project::update($id, $payload);
-
-        if (!$updated) {
-            json(['success' => false, 'message' => 'Project not found'], 404);
-        }
-
-        json([
-            'success' => true,
-            'message' => 'Project updated',
-            'data'    => $updated
-        ]);
-    }
-
+    // Reuse the common logic for update and delete
     public function destroy(): void
     {
         $id = (int)($_GET['id'] ?? 0);
-
-        if ($id <= 0) {
-            json(['success' => false, 'message' => 'Invalid project id'], 400);
-        }
-
-        if (!Project::delete($id)) {
+        if ($id <= 0 || !Project::delete($id)) {
             json(['success' => false, 'message' => 'Project not found'], 404);
         }
-
-        json([
-            'success' => true,
-            'message' => 'Project deleted'
-        ]);
+        json(['success' => true, 'message' => 'Project deleted']);
     }
 }
