@@ -21,6 +21,7 @@ import styles from './page.module.css';
 /* ---------------------------
    Helpers
 ---------------------------- */
+
 type IconName = 'Droplets' | 'BookOpen' | 'Sprout' | 'ShieldCheck' | string;
 
 const IconComponent = ({ name, size = 24 }: { name: IconName; size?: number }) => {
@@ -72,7 +73,13 @@ const gridStagger: Variants = {
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 24, scale: 0.985, filter: 'blur(10px)' },
-  show: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', transition: { duration: 0.6, ease: easeOut } },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.6, ease: easeOut },
+  },
 };
 
 function safeText(v: unknown, fallback = '') {
@@ -91,17 +98,33 @@ function isExternal(src: string) {
   return src.startsWith('http://') || src.startsWith('https://');
 }
 
+function normalizeBase(raw: string) {
+  return (raw || '').trim().replace(/\/$/, '');
+}
+
+async function safeJson(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
 /* ---------------------------
    Page
 ---------------------------- */
-export default function HomePage() {
-  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
 
+export default function HomePage() {
+  const API_BASE = normalizeBase(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com');
 
   const [currentSlide, setCurrentSlide] = useState(0);
+
   const [projects, setProjects] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [loadingPrograms, setLoadingPrograms] = useState(true);
+
   const [dataError, setDataError] = useState('');
 
   const marqueeItems = useMemo(() => [...partners, ...partners, ...partners], []);
@@ -111,49 +134,80 @@ export default function HomePage() {
     const timer = window.setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 6500);
+
     return () => window.clearInterval(timer);
   }, []);
 
-  // Fetch Programs + Projects
+  // ✅ Fetch Programs + Projects independently (one failing won't block the other)
   useEffect(() => {
     const ctrl = new AbortController();
 
-    const fetchData = async () => {
-      setLoading(true);
-      setDataError('');
-
+    const fetchPrograms = async () => {
+      setLoadingPrograms(true);
       try {
-        const [projRes, progRes] = await Promise.all([
-          fetch(`${API_BASE}/api/projects`, { signal: ctrl.signal, cache: 'no-store' }),
-          fetch(`${API_BASE}/api/programs`, { signal: ctrl.signal, cache: 'no-store' }),
-        ]);
-        
-        if (!projRes.ok || !progRes.ok) {
-          throw new Error(`Backend error: projects=${projRes.status}, programs=${progRes.status}`);
-        }
-        
-        const projJson = await projRes.json().catch(() => ({}));
-        const progJson = await progRes.json().catch(() => ({}));
-        
-        const projArray = projJson?.data || (Array.isArray(projJson) ? projJson : []);
-        const progArray = progJson?.data || (Array.isArray(progJson) ? progJson : []);
-        
-        setProjects(Array.isArray(projArray) ? projArray.slice(0, 3) : []);
-        setPrograms(Array.isArray(progArray) ? progArray : []);
+        const res = await fetch(`${API_BASE}/api/programs`, {
+          signal: ctrl.signal,
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+        });
 
+        if (!res.ok) {
+          setPrograms([]);
+          setDataError((prev) => prev || `Backend issue: programs=${res.status}`);
+          return;
+        }
+
+        const json = await safeJson(res);
+        const arr = json?.data || (Array.isArray(json) ? json : []);
+        setPrograms(Array.isArray(arr) ? arr : []);
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
-          console.error('Data fetch error:', err);
-          setDataError('Some content could not load. Please refresh or try again.');
+          setPrograms([]);
+          setDataError((prev) => prev || 'Programs failed to load.');
         }
       } finally {
-        setLoading(false);
+        setLoadingPrograms(false);
       }
     };
 
-    fetchData();
+    const fetchProjects = async () => {
+      setLoadingProjects(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/projects`, {
+          signal: ctrl.signal,
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!res.ok) {
+          setProjects([]);
+          setDataError((prev) => prev || `Backend issue: projects=${res.status}`);
+          return;
+        }
+
+        const json = await safeJson(res);
+        const arr = json?.data || (Array.isArray(json) ? json : []);
+        setProjects(Array.isArray(arr) ? arr.slice(0, 3) : []);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          setProjects([]);
+          setDataError((prev) => prev || 'Projects failed to load.');
+        }
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
+    // reset message once at start
+    setDataError('');
+    fetchPrograms();
+    fetchProjects();
+
     return () => ctrl.abort();
   }, [API_BASE]);
+
+  // Keep this if you want a global flag elsewhere (not used for per-section rendering now)
+  const loading = loadingPrograms || loadingProjects;
 
   return (
     <main className={styles.page}>
@@ -177,12 +231,7 @@ export default function HomePage() {
         <div className={styles.heroOverlay} aria-hidden="true" />
 
         <div className={styles.heroContainer}>
-          <motion.div
-            className={styles.heroContent}
-            variants={sectionVariants}
-            initial="hidden"
-            animate="show"
-          >
+          <motion.div className={styles.heroContent} variants={sectionVariants} initial="hidden" animate="show">
             <span className={styles.eyebrow}>Supporting Children • Transforming Communities</span>
 
             <h1 className={styles.heroTitle}>
@@ -190,8 +239,8 @@ export default function HomePage() {
             </h1>
 
             <p className={styles.heroLead}>
-              CMDI supports vulnerable children and strengthens communities through education, health,
-              WASH, child protection, and long-term resilience.
+              CMDI supports vulnerable children and strengthens communities through education, health, WASH, child
+              protection, and long-term resilience.
             </p>
 
             <div className={styles.heroActions}>
@@ -279,8 +328,8 @@ export default function HomePage() {
               <span className={styles.sectionTag}>Who We Are</span>
               <h2>Driven by compassion, guided by impact</h2>
               <p>
-                CMDI is community-led and child-focused. We work with families, local leaders, and
-                partners to deliver practical support that protects children and helps communities recover and grow.
+                CMDI is community-led and child-focused. We work with families, local leaders, and partners to deliver
+                practical support that protects children and helps communities recover and grow.
               </p>
 
               <Link href="/about" className={styles.btnSoft} scroll>
@@ -317,7 +366,8 @@ export default function HomePage() {
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
           >
-            {!loading && programs.length > 0 ? (
+            {/* ✅ FIX: use loadingPrograms (projects loading should NOT block programs rendering) */}
+            {!loadingPrograms && programs.length > 0 ? (
               programs.map((prog: any, i: number) => (
                 <motion.div
                   key={prog?.id ?? i}
@@ -332,10 +382,7 @@ export default function HomePage() {
 
                   <h3 className={styles.programTitle}>{safeText(prog?.title, 'Program')}</h3>
                   <p className={styles.programSummary}>
-                    {safeText(
-                      prog?.description,
-                      'We deliver practical support that strengthens children and families.'
-                    )}
+                    {safeText(prog?.description, 'We deliver practical support that strengthens children and families.')}
                   </p>
 
                   <Link href="/programs" className={styles.programLink} scroll>
@@ -344,12 +391,8 @@ export default function HomePage() {
                 </motion.div>
               ))
             ) : (
-              <motion.p
-                variants={cardVariants}
-                className={styles.loadingText}
-                aria-live="polite"
-              >
-                Loading pillars of impact...
+              <motion.p variants={cardVariants} className={styles.loadingText} aria-live="polite">
+                {loadingPrograms ? 'Loading pillars of impact...' : 'No programs available at this time.'}
               </motion.p>
             )}
           </motion.div>
@@ -385,7 +428,8 @@ export default function HomePage() {
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
           >
-            {!loading && projects.length > 0 ? (
+            {/* ✅ FIX: use loadingProjects (programs loading should NOT block projects rendering) */}
+            {!loadingProjects && projects.length > 0 ? (
               projects.map((project: any, i: number) => {
                 const imgSrc = resolveImg(project?.image_url);
                 return (
@@ -412,7 +456,10 @@ export default function HomePage() {
                       </span>
 
                       <h4>{safeText(project?.title, 'Community Project')}</h4>
-                      <p>{safeText(project?.description, '').slice(0, 110)}{safeText(project?.description, '').length > 110 ? '…' : ''}</p>
+                      <p>
+                        {safeText(project?.description, '').slice(0, 110)}
+                        {safeText(project?.description, '').length > 110 ? '…' : ''}
+                      </p>
 
                       <div className={styles.projectArrow} aria-hidden="true">
                         <ArrowUpRight size={20} />
@@ -423,7 +470,7 @@ export default function HomePage() {
               })
             ) : (
               <motion.p variants={cardVariants} className={styles.loadingText} aria-live="polite">
-                Loading featured projects...
+                {loadingProjects ? 'Loading featured projects...' : 'No featured projects available at this time.'}
               </motion.p>
             )}
           </motion.div>
@@ -461,8 +508,8 @@ export default function HomePage() {
             >
               <h2>Ready to make a difference?</h2>
               <p>
-                Your support helps deliver safe learning, clean water, protection services, and essential
-                care for children and families.
+                Your support helps deliver safe learning, clean water, protection services, and essential care for
+                children and families.
               </p>
 
               <div className={styles.ctaActions}>
@@ -475,9 +522,7 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              <div className={styles.ctaFinePrint}>
-                Trusted collaboration • Clear accountability • Community-led delivery
-              </div>
+              <div className={styles.ctaFinePrint}>Trusted collaboration • Clear accountability • Community-led delivery</div>
             </motion.div>
           </div>
         </div>
