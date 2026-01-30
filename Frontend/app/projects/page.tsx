@@ -6,7 +6,8 @@ import styles from './projects.module.css';
 import { Droplets, BookOpen, Shield, Hammer, Loader2, AlertCircle } from 'lucide-react';
 
 /**
- * Utility to map project titles or categories to specific icons
+ * Utility to map project categories to specific icons.
+ * Matches the 'category' column in your database.
  */
 const getIcon = (category: string) => {
   const cat = category?.toUpperCase() || '';
@@ -20,40 +21,44 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  // 1. HYDRATION FIX: Ensures the component only renders content once on the client.
+  const [error, setError] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
-
     const ctrl = new AbortController();
 
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        setError(false);
+        setError(null);
 
-        // Define API Base logic cleanly
+        // API Base URL Configuration
         const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com';
         const API_BASE = rawBase.trim().replace(/\/$/, '');
 
         const res = await fetch(`${API_BASE}/api/projects`, {
           method: 'GET',
-          headers: { Accept: 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json' 
+          },
           signal: ctrl.signal,
         });
 
-        if (!res.ok) throw new Error('Could not reach backend');
+        if (!res.ok) {
+          throw new Error(`Server responded with status: ${res.status}`);
+        }
 
         const json = await res.json();
+        
+        // Handle different possible JSON structures from your backend
         const data = json?.data || (Array.isArray(json) ? json : []);
         setProjects(data);
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
-          console.error('Backend connection error:', err);
-          setError(true);
+          console.error('Fetch error details:', err);
+          setError(err.message || 'Failed to connect to the server');
         }
       } finally {
         setLoading(false);
@@ -65,14 +70,13 @@ export default function ProjectsPage() {
     return () => ctrl.abort();
   }, []);
 
-  // Exit early if the component hasn't mounted in the browser yet.
+  // Hydration guard: Prevents mismatch between server and client HTML
   if (!hasMounted) return null;
 
   // Filter Logic
-  const filteredProjects =
-    filter === 'All'
-      ? projects
-      : projects.filter((p: any) => p.status?.toLowerCase() === filter.toLowerCase());
+  const filteredProjects = filter === 'All'
+    ? projects
+    : projects.filter((p: any) => p.status?.toLowerCase() === filter.toLowerCase());
 
   return (
     <main className={styles.page}>
@@ -107,21 +111,27 @@ export default function ProjectsPage() {
       {/* 3. PROJECT GRID */}
       <section className={styles.gridSection}>
         <div className={styles.container}>
-          {/* Loading View */}
+          
+          {/* Loading State */}
           {loading && (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>
-              <Loader2 className="animate-spin" size={48} color="#00aeef" />
+            <div style={{ textAlign: 'center', padding: '5rem' }}>
+              <Loader2 className="animate-spin" size={48} color="#00aeef" style={{ margin: '0 auto' }} />
+              <p style={{ marginTop: '1rem', color: '#64748b' }}>Waking up server, please wait...</p>
             </div>
           )}
 
-          {/* Error View */}
+          {/* Error State */}
           {error && !loading && (
             <div style={{ textAlign: 'center', color: '#ef4444', padding: '3rem' }}>
               <AlertCircle size={48} style={{ margin: '0 auto 1rem' }} />
-              <p style={{ fontWeight: 'bold' }}>Backend Connection Failed</p>
-              <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                Check that your backend is reachable and the API base URL is correct.
-              </p>
+              <p style={{ fontWeight: 'bold' }}>Connection Error</p>
+              <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{ marginTop: '1rem', color: '#00aeef', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Try Again
+              </button>
             </div>
           )}
 
@@ -131,14 +141,14 @@ export default function ProjectsPage() {
               {filteredProjects.length > 0 ? (
                 filteredProjects.map((project: any, index: number) => (
                   <div
-                    key={project.id ?? index}
+                    key={project.id || index}
                     className={styles.projectCard}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className={styles.imageWrapper}>
                       <Image
-                        src={project.image_url || '/images/projects/project-edu.jpeg'}
-                        alt={project.title}
+                        src={project.image_url || '/images/projects/project-placeholder.jpeg'}
+                        alt={project.title || 'Project Image'}
                         fill
                         className={styles.cardImg}
                         unoptimized 
@@ -147,16 +157,12 @@ export default function ProjectsPage() {
                     </div>
 
                     <div className={styles.cardContent}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: '0.5rem',
-                        }}
-                      >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                         <span className={styles.categoryTag}>{project.location || 'South Sudan'}</span>
-                        <span style={{ color: '#94a3b8' }}>{getIcon(project.title)}</span>
+                        <span style={{ color: '#94a3b8' }}>
+                          {/* Uses category from DB for correct icon mapping */}
+                          {getIcon(project.category || project.title)}
+                        </span>
                       </div>
 
                       <h3 className={styles.cardTitle}>{project.title}</h3>
@@ -180,9 +186,7 @@ export default function ProjectsPage() {
                   </div>
                 ))
               ) : (
-                <div
-                  style={{ textAlign: 'center', gridColumn: '1/-1', padding: '3rem', opacity: 0.5 }}
-                >
+                <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '3rem', opacity: 0.5 }}>
                   <p>No projects currently match this filter.</p>
                 </div>
               )}
