@@ -36,8 +36,10 @@ export default function ProjectsPage() {
         setLoading(true);
         setError(false);
 
-        const API_BASE = (() => {
-          const raw = process.env.NEXT_PUBLIC_API_BASE_URL;
+          const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com')
+            .trim()
+            .replace(/\/$/, '');
+
         
           // In production builds, fail fast if the env var is missing
           if (!raw && process.env.NODE_ENV === 'production') {
