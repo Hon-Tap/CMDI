@@ -23,7 +23,6 @@ export default function ProjectsPage() {
   const [error, setError] = useState(false);
 
   // 1. HYDRATION FIX: Ensures the component only renders content once on the client.
-  // This prevents the "Server-rendered HTML didn't match" error.
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
@@ -36,23 +35,9 @@ export default function ProjectsPage() {
         setLoading(true);
         setError(false);
 
-          const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com')
-            .trim()
-            .replace(/\/$/, '');
-
-        
-          // In production builds, fail fast if the env var is missing
-          if (!raw && process.env.NODE_ENV === 'production') {
-            throw new Error('Missing NEXT_PUBLIC_API_BASE_URL in production deployment');
-          }
-        
-          // In dev, allow localhost fallback
-          const base = (raw ?? 'http://127.0.0.1:8000').trim();
-        
-          // Remove trailing slash if present
-          return base.replace(/\/$/, '');
-        })();
-
+        // Define API Base logic cleanly
+        const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com';
+        const API_BASE = rawBase.trim().replace(/\/$/, '');
 
         const res = await fetch(`${API_BASE}/api/projects`, {
           method: 'GET',
@@ -83,7 +68,7 @@ export default function ProjectsPage() {
   // Exit early if the component hasn't mounted in the browser yet.
   if (!hasMounted) return null;
 
-  // Filter Logic: Compares status from database (e.g., "Ongoing", "active") to the filter buttons.
+  // Filter Logic
   const filteredProjects =
     filter === 'All'
       ? projects
@@ -156,7 +141,7 @@ export default function ProjectsPage() {
                         alt={project.title}
                         fill
                         className={styles.cardImg}
-                        unoptimized // Bypasses external image domain restrictions for development
+                        unoptimized 
                       />
                       <div className={styles.statusBadge}>{project.status}</div>
                     </div>
