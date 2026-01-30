@@ -1,193 +1,258 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import styles from './projects.module.css';
 import { Droplets, BookOpen, Shield, Hammer, Loader2, AlertCircle } from 'lucide-react';
 
-/**
- * Utility to map project categories to specific icons.
- * Matches the 'category' column in your database.
- */
-const getIcon = (category: string) => {
-  const cat = category?.toUpperCase() || '';
+/* -----------------------------
+  Types
+----------------------------- */
+
+type Project = {
+  id?: number | string;
+  title?: string;
+  description?: string;
+  image_url?: string;
+  status?: string;
+  location?: string;
+  category?: string;
+};
+
+type ApiResponse =
+  | { status?: string; data?: Project[] }
+  | Project[];
+
+/* -----------------------------
+  Helpers
+----------------------------- */
+
+const isExternal = (src: string) => src.startsWith('http://') || src.startsWith('https://');
+
+const resolveImg = (src?: string) => {
+  const s = (typeof src === 'string' ? src : '').trim();
+  if (!s) return '/images/projects/project1.jpeg'; // make sure this exists in /public
+  if (isExternal(s)) return s;
+  if (s.startsWith('/')) return s;
+  return `/${s}`; // <-- prevents next/image crash when backend returns "images/..."
+};
+
+// maps project categories to icons (based on your DB "category" column)
+const getIcon = (category?: string) => {
+  const cat = (category || '').toUpperCase();
   if (cat.includes('WASH') || cat.includes('WATER')) return <Droplets size={20} />;
   if (cat.includes('EDU')) return <BookOpen size={20} />;
-  if (cat.includes('LIVELIHOOD')) return <Hammer size={20} />;
+  if (cat.includes('LIVELIHOOD') || cat.includes('FOOD')) return <Hammer size={20} />;
   return <Shield size={20} />;
 };
 
+const unwrapArray = (result: ApiResponse): Project[] => {
+  if (Array.isArray(result)) return result;
+  if (result && typeof result === 'object' && Array.isArray((result as any).data)) return (result as any).data as Project[];
+  return [];
+};
+
+/* -----------------------------
+  Page
+----------------------------- */
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [filter, setFilter] = useState('All');
+  const searchParams = useSearchParams();
+
+  // SAFE API BASE (same idea as Programs page)
+  const apiBase = useMemo(
+    () => (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, ''),
+    []
+  );
+
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMounted, setHasMounted] = useState(false);
+  const [error, setError] = useState<string>('');
+
+  // Status filter buttons (matches your UI)
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Ongoing' | 'Completed' | 'Planning'>('All');
+
+  // Optional category filter from URL, e.g. /projects?filter=wash%20initiative
+  const urlFilter = (searchParams.get('filter') || '').trim().toLowerCase();
+
+  const fetchProjects = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${apiBase}/api/projects`, {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server status: ${res.status}`);
+      }
+
+      const result = (await res.json()) as ApiResponse;
+      const dataArray = unwrapArray(result);
+
+      setProjects(dataArray);
+    } catch (err: any) {
+      console.error('Fetch Error:', err);
+      setProjects([]);
+      setError('Connection failed. Please check your internet or retry below.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setHasMounted(true);
-    const ctrl = new AbortController();
-
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // API Base URL Configuration
-        const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com';
-        const API_BASE = rawBase.trim().replace(/\/$/, '');
-
-        const res = await fetch(`${API_BASE}/api/projects`, {
-          method: 'GET',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json' 
-          },
-          signal: ctrl.signal,
-        });
-
-        if (!res.ok) {
-          throw new Error(`Server responded with status: ${res.status}`);
-        }
-
-        const json = await res.json();
-        
-        // Handle different possible JSON structures from your backend
-        const data = json?.data || (Array.isArray(json) ? json : []);
-        setProjects(data);
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
-          console.error('Fetch error details:', err);
-          setError(err.message || 'Failed to connect to the server');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProjects();
-
-    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Hydration guard: Prevents mismatch between server and client HTML
-  if (!hasMounted) return null;
+  // Filtering
+  const filteredProjects = useMemo(() => {
+    let list = projects;
 
-  // Filter Logic
-  const filteredProjects = filter === 'All'
-    ? projects
-    : projects.filter((p: any) => p.status?.toLowerCase() === filter.toLowerCase());
+    // status filter (your buttons)
+    if (statusFilter !== 'All') {
+      list = list.filter((p) => (p.status || '').toLowerCase() === statusFilter.toLowerCase());
+    }
+
+    // optional URL filter (from Programs -> /projects?filter=...)
+    if (urlFilter) {
+      list = list.filter((p) => {
+        const cat = (p.category || '').toLowerCase();
+        const title = (p.title || '').toLowerCase();
+        return cat.includes(urlFilter) || title.includes(urlFilter);
+      });
+    }
+
+    return list;
+  }, [projects, statusFilter, urlFilter]);
 
   return (
     <main className={styles.page}>
-      {/* 1. HERO SECTION */}
+      {/* 1) HERO */}
       <section className={styles.hero}>
-        <div className={styles.heroOverlay}></div>
+        <div className={styles.heroOverlay} />
         <div className={styles.heroContent}>
           <h1 className={styles.heroTitle}>Our Impact in Action</h1>
-          <p style={{ fontSize: '1.25rem', opacity: 0.9 }}>
+          <p className={styles.heroSubtitle}>
             From Fangak County to the Upper Nile, we are turning contributions into tangible change.
           </p>
+
+          {/* Show URL filter hint if coming from Programs */}
+          {urlFilter ? (
+            <div className={styles.heroHint}>
+              Showing results matching: <strong>{urlFilter}</strong>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {/* 2. FILTER BAR */}
+      {/* 2) FILTER BAR */}
       <section className={styles.filterSection}>
         <div className={styles.container}>
           <div className={styles.filterContainer}>
-            {['All', 'Ongoing', 'Completed', 'Planning'].map((cat) => (
+            {(['All', 'Ongoing', 'Completed', 'Planning'] as const).map((s) => (
               <button
-                key={cat}
-                onClick={() => setFilter(cat)}
-                className={`${styles.filterBtn} ${filter === cat ? styles.filterBtnActive : ''}`}
+                key={s}
+                type="button"
+                onClick={() => setStatusFilter(s)}
+                className={`${styles.filterBtn} ${statusFilter === s ? styles.filterBtnActive : ''}`}
               >
-                {cat}
+                {s}
               </button>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 3. PROJECT GRID */}
+      {/* 3) GRID */}
       <section className={styles.gridSection}>
         <div className={styles.container}>
-          
-          {/* Loading State */}
+          {/* Loading */}
           {loading && (
-            <div style={{ textAlign: 'center', padding: '5rem' }}>
-              <Loader2 className="animate-spin" size={48} color="#00aeef" style={{ margin: '0 auto' }} />
-              <p style={{ marginTop: '1rem', color: '#64748b' }}>Waking up server, please wait...</p>
+            <div className={styles.statusWrap}>
+              <Loader2 className={styles.spinner} size={44} />
+              <p className={styles.statusText}>Waking up server, please wait...</p>
             </div>
           )}
 
-          {/* Error State */}
-          {error && !loading && (
-            <div style={{ textAlign: 'center', color: '#ef4444', padding: '3rem' }}>
-              <AlertCircle size={48} style={{ margin: '0 auto 1rem' }} />
-              <p style={{ fontWeight: 'bold' }}>Connection Error</p>
-              <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>{error}</p>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{ marginTop: '1rem', color: '#00aeef', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                Try Again
+          {/* Error */}
+          {!loading && error && (
+            <div className={styles.errorWrap}>
+              <AlertCircle size={44} />
+              <p className={styles.errorTitle}>Connection Error</p>
+              <p className={styles.errorText}>{error}</p>
+
+              <button type="button" onClick={fetchProjects} className={styles.retryBtn}>
+                Retry Connection
               </button>
             </div>
           )}
 
-          {/* Project List View */}
+          {/* Content */}
           {!loading && !error && (
             <div className={styles.projectGrid}>
               {filteredProjects.length > 0 ? (
-                filteredProjects.map((project: any, index: number) => (
-                  <div
-                    key={project.id || index}
-                    className={styles.projectCard}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <div className={styles.imageWrapper}>
-                      <Image
-                        src={project.image_url || '/images/projects/project-placeholder.jpeg'}
-                        alt={project.title || 'Project Image'}
-                        fill
-                        className={styles.cardImg}
-                        unoptimized 
-                      />
-                      <div className={styles.statusBadge}>{project.status}</div>
-                    </div>
+                filteredProjects.map((project, index) => {
+                  const imgSrc = resolveImg(project.image_url);
+                  const external = isExternal(imgSrc);
 
-                    <div className={styles.cardContent}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <span className={styles.categoryTag}>{project.location || 'South Sudan'}</span>
-                        <span style={{ color: '#94a3b8' }}>
-                          {/* Uses category from DB for correct icon mapping */}
-                          {getIcon(project.category || project.title)}
-                        </span>
+                  return (
+                    <div
+                      key={project.id ?? index}
+                      className={styles.projectCard}
+                      style={{ animationDelay: `${index * 0.08}s` }}
+                    >
+                      <div className={styles.imageWrapper}>
+                        <Image
+                          src={imgSrc}
+                          alt={project.title || 'Project Image'}
+                          fill
+                          className={styles.cardImg}
+                          sizes="(max-width: 960px) 92vw, 420px"
+                          unoptimized={external}
+                        />
+                        <div className={styles.statusBadge}>{project.status || 'Ongoing'}</div>
                       </div>
 
-                      <h3 className={styles.cardTitle}>{project.title}</h3>
-                      <p className={styles.cardDesc}>{project.description}</p>
-
-                      <div className={styles.fundingMeta}>
-                        <div className={styles.fundingInfo}>
-                          <span>Progress</span>
-                          <span>{project.status?.toLowerCase() === 'completed' ? '100%' : '65%'}</span>
+                      <div className={styles.cardContent}>
+                        <div className={styles.cardTopRow}>
+                          <span className={styles.categoryTag}>{project.location || 'South Sudan'}</span>
+                          <span className={styles.cardIcon}>{getIcon(project.category || project.title)}</span>
                         </div>
-                        <div className={styles.progressBarBg}>
-                          <div
-                            className={styles.progressBarFill}
-                            style={{
-                              width: project.status?.toLowerCase() === 'completed' ? '100%' : '65%',
-                            }}
-                          ></div>
+
+                        <h3 className={styles.cardTitle}>{project.title || 'Community Project'}</h3>
+                        <p className={styles.cardDesc}>
+                          {project.description || 'Community-led interventions delivering practical support.'}
+                        </p>
+
+                        <div className={styles.fundingMeta}>
+                          <div className={styles.fundingInfo}>
+                            <span>Progress</span>
+                            <span>{(project.status || '').toLowerCase() === 'completed' ? '100%' : '65%'}</span>
+                          </div>
+
+                          <div className={styles.progressBarBg}>
+                            <div
+                              className={styles.progressBarFill}
+                              style={{
+                                width: (project.status || '').toLowerCase() === 'completed' ? '100%' : '65%',
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
-                <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '3rem', opacity: 0.5 }}>
+                <div className={styles.emptyState}>
                   <p>No projects currently match this filter.</p>
+                  <button type="button" onClick={fetchProjects} className={styles.retryBtn}>
+                    Refresh
+                  </button>
                 </div>
               )}
             </div>
