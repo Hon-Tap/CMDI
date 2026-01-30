@@ -95,7 +95,8 @@ function isExternal(src: string) {
    Page
 ---------------------------- */
 export default function HomePage() {
-  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
+
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [projects, setProjects] = useState<any[]>([]);
