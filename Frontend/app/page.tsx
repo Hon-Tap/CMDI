@@ -124,18 +124,23 @@ export default function HomePage() {
 
       try {
         const [projRes, progRes] = await Promise.all([
-          fetch(`${API_BASE}/api/projects`, { signal: ctrl.signal }),
-          fetch(`${API_BASE}/api/programs`, { signal: ctrl.signal }),
+          fetch(`${API_BASE}/api/projects`, { signal: ctrl.signal, cache: 'no-store' }),
+          fetch(`${API_BASE}/api/programs`, { signal: ctrl.signal, cache: 'no-store' }),
         ]);
-
-        const projJson = await projRes.json();
-        const progJson = await progRes.json();
-
+        
+        if (!projRes.ok || !progRes.ok) {
+          throw new Error(`Backend error: projects=${projRes.status}, programs=${progRes.status}`);
+        }
+        
+        const projJson = await projRes.json().catch(() => ({}));
+        const progJson = await progRes.json().catch(() => ({}));
+        
         const projArray = projJson?.data || (Array.isArray(projJson) ? projJson : []);
         const progArray = progJson?.data || (Array.isArray(progJson) ? progJson : []);
+        
+        setProjects(Array.isArray(projArray) ? projArray.slice(0, 3) : []);
+        setPrograms(Array.isArray(progArray) ? progArray : []);
 
-        setProjects((projArray || []).slice(0, 3));
-        setPrograms(progArray || []);
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
           console.error('Data fetch error:', err);
