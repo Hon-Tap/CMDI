@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import styles from './projects.module.css';
@@ -20,9 +20,7 @@ type Project = {
   category?: string;
 };
 
-type ApiResponse =
-  | { status?: string; data?: Project[] }
-  | Project[];
+type ApiResponse = { status?: string; data?: Project[] } | Project[];
 
 /* -----------------------------
   Helpers
@@ -32,13 +30,12 @@ const isExternal = (src: string) => src.startsWith('http://') || src.startsWith(
 
 const resolveImg = (src?: string) => {
   const s = (typeof src === 'string' ? src : '').trim();
-  if (!s) return '/images/projects/project1.jpeg'; // make sure this exists in /public
+  if (!s) return '/images/projects/project1.jpeg'; // ensure exists in /public
   if (isExternal(s)) return s;
   if (s.startsWith('/')) return s;
-  return `/${s}`; // <-- prevents next/image crash when backend returns "images/..."
+  return `/${s}`; // supports "images/..." from backend
 };
 
-// maps project categories to icons (based on your DB "category" column)
 const getIcon = (category?: string) => {
   const cat = (category || '').toUpperCase();
   if (cat.includes('WASH') || cat.includes('WATER')) return <Droplets size={20} />;
@@ -49,18 +46,51 @@ const getIcon = (category?: string) => {
 
 const unwrapArray = (result: ApiResponse): Project[] => {
   if (Array.isArray(result)) return result;
-  if (result && typeof result === 'object' && Array.isArray((result as any).data)) return (result as any).data as Project[];
+  if (result && typeof result === 'object' && Array.isArray((result as any).data)) {
+    return (result as any).data as Project[];
+  }
   return [];
 };
 
+async function safeJson(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
 /* -----------------------------
-  Page
+  ✅ FIX: Wrap hook usage in Suspense (no file moving)
 ----------------------------- */
 
 export default function ProjectsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className={styles.page}>
+          <section className={styles.hero}>
+            <div className={styles.heroContent}>
+              <h1 className={styles.heroTitle}>Our Impact in Action</h1>
+              <p className={styles.heroSubtitle}>Loading projects…</p>
+            </div>
+          </section>
+        </main>
+      }
+    >
+      <ProjectsPageClient />
+    </Suspense>
+  );
+}
+
+/* -----------------------------
+  Actual client page (useSearchParams lives here)
+----------------------------- */
+
+function ProjectsPageClient() {
   const searchParams = useSearchParams();
 
-  // SAFE API BASE (same idea as Programs page)
+  // SAFE API BASE (same approach as Programs page)
   const apiBase = useMemo(
     () => (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, ''),
     []
@@ -70,13 +100,12 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
-  // Status filter buttons (matches your UI)
   const [statusFilter, setStatusFilter] = useState<'All' | 'Ongoing' | 'Completed' | 'Planning'>('All');
 
-  // Optional category filter from URL, e.g. /projects?filter=wash%20initiative
+  // Optional filter from URL (Programs → /projects?filter=...)
   const urlFilter = (searchParams.get('filter') || '').trim().toLowerCase();
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (signal?: AbortSignal) => {
     setLoading(true);
     setError('');
 
@@ -84,40 +113,40 @@ export default function ProjectsPage() {
       const res = await fetch(`${apiBase}/api/projects`, {
         cache: 'no-store',
         headers: { Accept: 'application/json' },
+        signal,
       });
 
-      if (!res.ok) {
-        throw new Error(`Server status: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server status: ${res.status}`);
 
-      const result = (await res.json()) as ApiResponse;
-      const dataArray = unwrapArray(result);
-
-      setProjects(dataArray);
+      const json = (await safeJson(res)) as ApiResponse;
+      setProjects(unwrapArray(json));
     } catch (err: any) {
+      if (err?.name === 'AbortError') return;
       console.error('Fetch Error:', err);
       setProjects([]);
-      setError('Connection failed. Please check your internet or retry below.');
+      setError(err?.message ? `Connection failed: ${err.message}` : 'Connection failed. Please retry below.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProjects();
+    const ctrl = new AbortController();
+    void fetchProjects(ctrl.signal);
+    return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [apiBase]);
 
-  // Filtering
   const filteredProjects = useMemo(() => {
     let list = projects;
 
-    // status filter (your buttons)
+    // Status buttons filter
     if (statusFilter !== 'All') {
-      list = list.filter((p) => (p.status || '').toLowerCase() === statusFilter.toLowerCase());
+      const needle = statusFilter.toLowerCase();
+      list = list.filter((p) => (p.status || '').toLowerCase() === needle);
     }
 
-    // optional URL filter (from Programs -> /projects?filter=...)
+    // URL filter (Programs page sends title-based filter)
     if (urlFilter) {
       list = list.filter((p) => {
         const cat = (p.category || '').toLowerCase();
@@ -140,7 +169,6 @@ export default function ProjectsPage() {
             From Fangak County to the Upper Nile, we are turning contributions into tangible change.
           </p>
 
-          {/* Show URL filter hint if coming from Programs */}
           {urlFilter ? (
             <div className={styles.heroHint}>
               Showing results matching: <strong>{urlFilter}</strong>
@@ -185,7 +213,14 @@ export default function ProjectsPage() {
               <p className={styles.errorTitle}>Connection Error</p>
               <p className={styles.errorText}>{error}</p>
 
-              <button type="button" onClick={fetchProjects} className={styles.retryBtn}>
+              <button
+                type="button"
+                onClick={() => {
+                  const ctrl = new AbortController();
+                  void fetchProjects(ctrl.signal);
+                }}
+                className={styles.retryBtn}
+              >
                 Retry Connection
               </button>
             </div>
@@ -224,6 +259,7 @@ export default function ProjectsPage() {
                         </div>
 
                         <h3 className={styles.cardTitle}>{project.title || 'Community Project'}</h3>
+
                         <p className={styles.cardDesc}>
                           {project.description || 'Community-led interventions delivering practical support.'}
                         </p>
@@ -250,7 +286,14 @@ export default function ProjectsPage() {
               ) : (
                 <div className={styles.emptyState}>
                   <p>No projects currently match this filter.</p>
-                  <button type="button" onClick={fetchProjects} className={styles.retryBtn}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ctrl = new AbortController();
+                      void fetchProjects(ctrl.signal);
+                    }}
+                    className={styles.retryBtn}
+                  >
                     Refresh
                   </button>
                 </div>
