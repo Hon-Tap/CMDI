@@ -28,8 +28,8 @@ type FocusArea =
   | 'Advocacy & Community Engagement';
 
 export default function PartnerWithUsPage() {
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'http://127.0.0.1:8000';
+  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
+
 
   const focusAreas: FocusArea[] = useMemo(
     () => [
