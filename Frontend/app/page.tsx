@@ -18,37 +18,41 @@ import {
 
 import styles from './page.module.css';
 
-/* ---------------------------
-   Helpers
----------------------------- */
+/* --------------------------------
+  Types
+--------------------------------- */
+type IconName = 'Droplets' | 'BookOpen' | 'Sprout' | 'ShieldCheck';
 
-type IconName = 'Droplets' | 'BookOpen' | 'Sprout' | 'ShieldCheck' | string;
-
-const IconComponent = ({ name, size = 24 }: { name: IconName; size?: number }) => {
-  switch (name) {
-    case 'Droplets':
-      return <Droplets size={size} />;
-    case 'BookOpen':
-      return <BookOpen size={size} />;
-    case 'Sprout':
-      return <Sprout size={size} />;
-    case 'ShieldCheck':
-      return <ShieldCheck size={size} />;
-    default:
-      return <Zap size={size} />;
-  }
+type Program = {
+  id: number | string;
+  title?: string;
+  description?: string;
+  icon_name?: string;
 };
 
-const heroImages = [
+type Project = {
+  id: number | string;
+  title?: string;
+  description?: string;
+  image_url?: string;
+  category?: string;
+  status?: string;
+};
+
+type ApiEnvelope<T> = { data?: T } | T;
+
+/* --------------------------------
+  Constants (module-scope is safe)
+--------------------------------- */
+const HERO_SLIDES = [
   '/images/hero/slide1.jpeg',
   '/images/hero/slide2.png',
   '/images/hero/slide3.jpeg',
   '/images/hero/slide4.jpeg',
-];
+] as const;
 
-const partners = ['UNICEF', 'Save the Children', 'USAID', 'World Vision', 'Oxfam', 'Plan International'];
+const PARTNERS = ['UNICEF', 'Save the Children', 'USAID', 'World Vision', 'Oxfam', 'Plan International'] as const;
 
-/* Motion presets */
 const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const sectionVariants: Variants = {
@@ -82,27 +86,30 @@ const cardVariants: Variants = {
   },
 };
 
-function safeText(v: unknown, fallback = '') {
+/* --------------------------------
+  Helpers
+--------------------------------- */
+function safeText(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
 }
 
-function resolveImg(src?: string) {
+function normalizeBase(raw: string): string {
+  return (raw || '').trim().replace(/\/$/, '');
+}
+
+function isExternal(src: string): boolean {
+  return src.startsWith('http://') || src.startsWith('https://');
+}
+
+function resolveImg(src?: string): string {
   const s = safeText(src, '');
   if (!s) return '/images/projects/project1.jpeg';
-  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  if (isExternal(s)) return s;
   if (s.startsWith('/')) return s;
   return `/${s}`;
 }
 
-function isExternal(src: string) {
-  return src.startsWith('http://') || src.startsWith('https://');
-}
-
-function normalizeBase(raw: string) {
-  return (raw || '').trim().replace(/\/$/, '');
-}
-
-async function safeJson(res: Response) {
+async function safeJson(res: Response): Promise<unknown> {
   try {
     return await res.json();
   } catch {
@@ -110,40 +117,68 @@ async function safeJson(res: Response) {
   }
 }
 
-/* ---------------------------
-   Page
----------------------------- */
+function IconComponent({ name, size = 24 }: { name?: string; size?: number }) {
+  switch (name as IconName) {
+    case 'Droplets':
+      return <Droplets size={size} />;
+    case 'BookOpen':
+      return <BookOpen size={size} />;
+    case 'Sprout':
+      return <Sprout size={size} />;
+    case 'ShieldCheck':
+      return <ShieldCheck size={size} />;
+    default:
+      return <Zap size={size} />;
+  }
+}
 
+function unwrapList<T>(payload: unknown): T[] {
+  const p = payload as ApiEnvelope<T[]>;
+  // supports { data: [...] } OR [...]
+  if (Array.isArray(p)) return p;
+  if (p && typeof p === 'object' && Array.isArray((p as { data?: unknown }).data)) return (p as { data: T[] }).data;
+  return [];
+}
+
+/* --------------------------------
+  Page
+--------------------------------- */
 export default function HomePage() {
-  const API_BASE = normalizeBase(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com');
+  const API_BASE = useMemo(
+    () => normalizeBase(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://cmdi-backend.onrender.com'),
+    []
+  );
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const [projects, setProjects] = useState<any[]>([]);
-  const [programs, setPrograms] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
-  const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
-  const [dataError, setDataError] = useState('');
+  const [programsError, setProgramsError] = useState<string>('');
+  const [projectsError, setProjectsError] = useState<string>('');
 
-  const marqueeItems = useMemo(() => [...partners, ...partners, ...partners], []);
+  const marqueeItems = useMemo(() => [...PARTNERS, ...PARTNERS, ...PARTNERS], []);
 
-  // Hero slider
+  // Hero slider (deps are clean + stable)
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    const id = window.setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
     }, 6500);
 
-    return () => window.clearInterval(timer);
+    return () => window.clearInterval(id);
   }, []);
 
-  // ✅ Fetch Programs + Projects independently (one failing won't block the other)
+  // Fetch Programs + Projects independently (build-safe: runs only on client)
   useEffect(() => {
     const ctrl = new AbortController();
 
     const fetchPrograms = async () => {
       setLoadingPrograms(true);
+      setProgramsError('');
+
       try {
         const res = await fetch(`${API_BASE}/api/programs`, {
           signal: ctrl.signal,
@@ -153,17 +188,17 @@ export default function HomePage() {
 
         if (!res.ok) {
           setPrograms([]);
-          setDataError((prev) => prev || `Backend issue: programs=${res.status}`);
+          setProgramsError(`Backend issue: programs=${res.status}`);
           return;
         }
 
         const json = await safeJson(res);
-        const arr = json?.data || (Array.isArray(json) ? json : []);
-        setPrograms(Array.isArray(arr) ? arr : []);
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
+        const list = unwrapList<Program>(json);
+        setPrograms(list);
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name !== 'AbortError') {
           setPrograms([]);
-          setDataError((prev) => prev || 'Programs failed to load.');
+          setProgramsError('Programs failed to load.');
         }
       } finally {
         setLoadingPrograms(false);
@@ -172,6 +207,8 @@ export default function HomePage() {
 
     const fetchProjects = async () => {
       setLoadingProjects(true);
+      setProjectsError('');
+
       try {
         const res = await fetch(`${API_BASE}/api/projects`, {
           signal: ctrl.signal,
@@ -181,33 +218,28 @@ export default function HomePage() {
 
         if (!res.ok) {
           setProjects([]);
-          setDataError((prev) => prev || `Backend issue: projects=${res.status}`);
+          setProjectsError(`Backend issue: projects=${res.status}`);
           return;
         }
 
         const json = await safeJson(res);
-        const arr = json?.data || (Array.isArray(json) ? json : []);
-        setProjects(Array.isArray(arr) ? arr.slice(0, 3) : []);
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
+        const list = unwrapList<Project>(json);
+        setProjects(list.slice(0, 3));
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name !== 'AbortError') {
           setProjects([]);
-          setDataError((prev) => prev || 'Projects failed to load.');
+          setProjectsError('Projects failed to load.');
         }
       } finally {
         setLoadingProjects(false);
       }
     };
 
-    // reset message once at start
-    setDataError('');
-    fetchPrograms();
-    fetchProjects();
+    void fetchPrograms();
+    void fetchProjects();
 
     return () => ctrl.abort();
   }, [API_BASE]);
-
-  // Keep this if you want a global flag elsewhere (not used for per-section rendering now)
-  const loading = loadingPrograms || loadingProjects;
 
   return (
     <main className={styles.page}>
@@ -223,7 +255,7 @@ export default function HomePage() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
             transition={{ duration: 1.15, ease: easeOut }}
-            style={{ backgroundImage: `url(${heroImages[currentSlide]})` }}
+            style={{ backgroundImage: `url(${HERO_SLIDES[currentSlide]})` }}
             aria-hidden="true"
           />
         </AnimatePresence>
@@ -268,7 +300,7 @@ export default function HomePage() {
             </div>
 
             <div className={styles.heroDots} aria-label="Hero slides">
-              {heroImages.map((_, i) => (
+              {HERO_SLIDES.map((_, i) => (
                 <button
                   key={i}
                   type="button"
@@ -315,6 +347,7 @@ export default function HomePage() {
                 fill
                 className={styles.aboutImg}
                 sizes="(max-width: 960px) 92vw, 520px"
+                priority
               />
             </motion.div>
 
@@ -357,7 +390,7 @@ export default function HomePage() {
             <p>Holistic solutions shaped by community needs and delivered with accountability.</p>
           </motion.div>
 
-          {dataError && <p className={styles.inlineError}>{dataError}</p>}
+          {programsError ? <p className={styles.inlineError}>{programsError}</p> : null}
 
           <motion.div
             className={styles.programGrid}
@@ -366,23 +399,22 @@ export default function HomePage() {
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
           >
-            {/* ✅ FIX: use loadingPrograms (projects loading should NOT block programs rendering) */}
             {!loadingPrograms && programs.length > 0 ? (
-              programs.map((prog: any, i: number) => (
+              programs.map((prog, i) => (
                 <motion.div
-                  key={prog?.id ?? i}
+                  key={prog.id ?? i}
                   className={`${styles.programCard} ${styles.scrollPop}`}
                   variants={cardVariants}
                   whileHover={{ y: -10 }}
                   transition={{ duration: 0.25, ease: easeOut }}
                 >
                   <div className={styles.programIconWrapper} aria-hidden="true">
-                    <IconComponent name={prog?.icon_name} />
+                    <IconComponent name={prog.icon_name} />
                   </div>
 
-                  <h3 className={styles.programTitle}>{safeText(prog?.title, 'Program')}</h3>
+                  <h3 className={styles.programTitle}>{safeText(prog.title, 'Program')}</h3>
                   <p className={styles.programSummary}>
-                    {safeText(prog?.description, 'We deliver practical support that strengthens children and families.')}
+                    {safeText(prog.description, 'We deliver practical support that strengthens children and families.')}
                   </p>
 
                   <Link href="/programs" className={styles.programLink} scroll>
@@ -421,6 +453,8 @@ export default function HomePage() {
             </Link>
           </motion.div>
 
+          {projectsError ? <p className={styles.inlineError}>{projectsError}</p> : null}
+
           <motion.div
             className={styles.projectGrid}
             variants={gridStagger}
@@ -428,37 +462,41 @@ export default function HomePage() {
             whileInView="show"
             viewport={{ once: true, amount: 0.2 }}
           >
-            {/* ✅ FIX: use loadingProjects (programs loading should NOT block projects rendering) */}
             {!loadingProjects && projects.length > 0 ? (
-              projects.map((project: any, i: number) => {
-                const imgSrc = resolveImg(project?.image_url);
+              projects.map((project, i) => {
+                const imgSrc = resolveImg(project.image_url);
+                const external = isExternal(imgSrc);
+                const title = safeText(project.title, 'Community Project');
+                const desc = safeText(project.description, '');
+                const category = safeText(project.category, safeText(project.status, 'Field Work'));
+
                 return (
                   <motion.div
-                    key={project?.id ?? i}
+                    key={project.id ?? i}
                     className={`${styles.projectCardWrapper} ${styles.scrollAnimate}`}
                     variants={cardVariants}
                   >
                     <div className={styles.projectImgBox}>
                       <Image
                         src={imgSrc}
-                        alt={safeText(project?.title, 'Project')}
+                        alt={title}
                         fill
                         className={styles.projectImg}
                         sizes="(max-width: 960px) 92vw, 420px"
-                        unoptimized={isExternal(imgSrc)}
+                        unoptimized={external}
                       />
                     </div>
 
                     <Link href="/projects" className={styles.projectOverlayCard} scroll>
                       <span className={styles.projectCategory}>
                         <MapPin size={14} />
-                        {safeText(project?.category, safeText(project?.status, 'Field Work'))}
+                        {category}
                       </span>
 
-                      <h4>{safeText(project?.title, 'Community Project')}</h4>
+                      <h4>{title}</h4>
                       <p>
-                        {safeText(project?.description, '').slice(0, 110)}
-                        {safeText(project?.description, '').length > 110 ? '…' : ''}
+                        {desc.slice(0, 110)}
+                        {desc.length > 110 ? '…' : ''}
                       </p>
 
                       <div className={styles.projectArrow} aria-hidden="true">
@@ -478,7 +516,7 @@ export default function HomePage() {
       </section>
 
       {/* =====================================================
-          6) CTA / DONATE (UPGRADED)
+          6) CTA / DONATE
       ====================================================== */}
       <section className={styles.ctaSection}>
         <div className={styles.ctaBackdrop} aria-hidden="true" />
@@ -522,7 +560,9 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              <div className={styles.ctaFinePrint}>Trusted collaboration • Clear accountability • Community-led delivery</div>
+              <div className={styles.ctaFinePrint}>
+                Trusted collaboration • Clear accountability • Community-led delivery
+              </div>
             </motion.div>
           </div>
         </div>
