@@ -26,3 +26,6 @@ The project is split into two main environments:
 git clone [https://github.com/your-username/CMDI.git](https://github.com/your-username/CMDI.git)
 cd CMDI
 deploy test
+
+
+Local editing via VS Code enabled.
