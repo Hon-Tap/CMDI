@@ -1,14 +1,17 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { checkPassword, issueAdminToken, setAdminCookie } from "@/lib/adminAuth";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
+  const password = body?.password;
 
-  const parsed = z.object({ password: z.string().min(6) }).safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  if (typeof password !== "string" || password.length < 6) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
 
-  const ok = await checkPassword(parsed.data.password);
+  const ok = await checkPassword(password);
   if (!ok) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
 
   const token = await issueAdminToken();
