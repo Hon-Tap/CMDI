@@ -51,7 +51,7 @@
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  *, .card, .featuredCard, .modalContent {
+  .card, .featuredCard, .modalContent, .hero, .primaryBtn {
     animation: none !important;
     transition: none !important;
   }
