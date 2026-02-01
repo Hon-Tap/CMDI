@@ -49,8 +49,9 @@ export default function EditProjectPage() {
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState('');
+  
+  const endpoint = `/api/admin/content/projects/${id}`;
 
-  const endpoint = useMemo(() => (id ? `/admin/content/projects/${id}` : ''), [id]);
 
   const isDirty = useMemo(() => {
     if (!original) return false;

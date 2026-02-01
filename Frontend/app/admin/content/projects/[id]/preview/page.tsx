@@ -26,7 +26,8 @@ export default function ProjectPreviewPage() {
   const params = useParams();
   const id = useMemo(() => safeId((params as any)?.id), [params]);
 
-  const endpoint = useMemo(() => (id ? `/admin/content/projects/${id}` : ''), [id]);
+  const endpoint = `/api/admin/content/projects/${id}`;
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
