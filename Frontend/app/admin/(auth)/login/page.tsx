@@ -1,25 +1,56 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-type FetchError = { error?: string };
+type ApiError = {
+  error?: string;
+  details?: string;
+  message?: string;
+};
+
+function safeNext(next: string | null) {
+  if (!next) return '/admin';
+  // Only allow internal relative paths
+  if (next.startsWith('/') && !next.startsWith('//')) return next;
+  return '/admin';
+}
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const nextParam = useMemo(() => {
-    const next = searchParams.get('next');
-    return next && next.startsWith('/') ? next : '/admin';
-  }, [searchParams]);
+  const nextParam = useMemo(() => safeNext(searchParams.get('next')), [searchParams]);
 
   const [email, setEmail] = useState('admin@cmdi-ss.org');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
+  const [capsLockOn, setCapsLockOn] = useState(false);
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Cleanup any inflight request on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
+
+  const cleanEmail = email.trim().toLowerCase();
+  const canSubmit = cleanEmail.length > 3 && password.length >= 6 && !loading;
+
+  function setApiErrorFromResponse(payload: ApiError | null) {
+    const msg =
+      payload?.error ||
+      payload?.message ||
+      (payload?.details ? `${payload.details}` : '') ||
+      'Login failed';
+    setError(msg);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,43 +59,81 @@ function LoginForm() {
     setError('');
     setLoading(true);
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password;
+    // Abort any previous submit (rare but helps during retries)
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
 
     try {
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
+        body: JSON.stringify({ email: cleanEmail, password }),
+        signal: abortRef.current.signal,
       });
 
+      // Try to parse JSON, but don’t assume it’s JSON (500s often return HTML/text)
+      const text = await res.text();
+      const data: ApiError | null = (() => {
+        try {
+          return text ? (JSON.parse(text) as ApiError) : null;
+        } catch {
+          return null;
+        }
+      })();
+
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as FetchError | null;
-        setError(data?.error || 'Login failed');
+        // Prefer API-provided error; otherwise provide a helpful fallback
+        if (data) {
+          setApiErrorFromResponse(data);
+        } else {
+          // If response isn't JSON, show status with generic message
+          setError(res.status === 500 ? 'Server error. Please try again.' : `Login failed (${res.status}).`);
+        }
         return;
       }
 
+      // Success
       router.replace(nextParam);
       router.refresh();
-    } catch {
-      setError('Network error. Try again.');
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return; // ignore
+      setError('Network error. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
   }
 
-  const canSubmit = email.trim().length > 3 && password.length >= 6 && !loading;
+  function onPasswordKeyUp(e: React.KeyboardEvent<HTMLInputElement>) {
+    // CapsLock detection (best-effort)
+    const caps = e.getModifierState?.('CapsLock') ?? false;
+    setCapsLockOn(caps);
+  }
 
   return (
     <div style={styles.card}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Admin Login</h1>
-        <p style={styles.subtitle}>Sign in to manage content.</p>
+        <div style={styles.brandRow}>
+          <div style={styles.badge}>CMDI</div>
+          <div style={styles.brandText}>
+            <h1 style={styles.title}>Admin Login</h1>
+            <p style={styles.subtitle}>Sign in to manage content.</p>
+          </div>
+        </div>
       </div>
 
       {error ? (
         <div role="alert" style={styles.alert}>
-          <strong style={{ fontWeight: 800 }}>Error:</strong> {error}
+          <div style={styles.alertTitle}>Error</div>
+          <div style={styles.alertBody}>{error}</div>
+
+          {/* Helpful hint for your current known failure mode */}
+          {error.toLowerCase().includes('econnrefused') || error.includes('127.0.0.1:5432') ? (
+            <div style={styles.alertHint}>
+              This usually means the API tried to connect to <code>127.0.0.1:5432</code>. On Vercel that happens when
+              the deployment didn’t receive <code>DATABASE_URL</code> (common on Preview) or the backend is ignoring it.
+              Redeploy the Preview deployment after setting env vars.
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -76,10 +145,15 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             type="email"
             autoComplete="email"
+            inputMode="email"
             required
             placeholder="admin@cmdi-ss.org"
             style={styles.input}
+            aria-invalid={Boolean(error) || undefined}
           />
+          <span style={styles.microHint}>
+            Use the admin email address. (Lower/upper case doesn’t matter.)
+          </span>
         </label>
 
         <label style={styles.label}>
@@ -96,23 +170,34 @@ function LoginForm() {
             </button>
           </span>
 
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type={showPw ? 'text' : 'password'}
-            autoComplete="current-password"
-            required
-            placeholder="••••••••••••"
-            style={styles.input}
-          />
+          <div style={styles.pwWrap}>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyUp={onPasswordKeyUp}
+              type={showPw ? 'text' : 'password'}
+              autoComplete="current-password"
+              required
+              placeholder="••••••••••••"
+              style={styles.input}
+              aria-invalid={Boolean(error) || undefined}
+            />
+          </div>
+
+          {capsLockOn ? <span style={styles.capsWarn}>Caps Lock is ON</span> : null}
         </label>
 
-        <button type="submit" disabled={!canSubmit} style={{ ...styles.primaryBtn, ...(canSubmit ? null : styles.primaryBtnDisabled) }}>
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          style={{ ...styles.primaryBtn, ...(canSubmit ? null : styles.primaryBtnDisabled) }}
+        >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
 
         <p style={styles.hint}>
-          Tip: if you get “Invalid credentials”, confirm Vercel has <code>DATABASE_URL</code> set and you’re using the latest password.
+          Tip: If you get a 500 with <code>ECONNREFUSED 127.0.0.1:5432</code>, the server is not using the remote
+          database URL. Confirm <code>DATABASE_URL</code> is set for <b>Preview</b> and <b>Redeploy</b> that preview.
         </p>
       </form>
     </div>
@@ -135,20 +220,39 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'grid',
     placeItems: 'center',
     padding: 24,
-    background: 'radial-gradient(1200px 800px at 20% 10%, rgba(14,165,233,.12), transparent 50%), #f6f7fb',
+    background:
+      'radial-gradient(1200px 800px at 20% 10%, rgba(14,165,233,.12), transparent 50%), radial-gradient(900px 600px at 90% 30%, rgba(99,102,241,.10), transparent 55%), #f6f7fb',
   },
+
   card: {
     width: '100%',
-    maxWidth: 460,
+    maxWidth: 480,
     background: '#fff',
     border: '1px solid rgba(15,23,42,.10)',
     borderRadius: 18,
     padding: 22,
     boxShadow: '0 18px 60px rgba(15,23,42,.10)',
   },
-  header: { marginBottom: 14 },
+
+  header: { marginBottom: 12 },
+
+  brandRow: { display: 'flex', gap: 12, alignItems: 'center' },
+  badge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 900,
+    letterSpacing: -0.2,
+    border: '1px solid rgba(15,23,42,.10)',
+    background: 'linear-gradient(180deg, rgba(14,165,233,.14), rgba(14,165,233,.06))',
+    color: '#0f172a',
+  },
+  brandText: { display: 'grid' },
+
   title: { margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.2, color: '#0f172a' },
-  subtitle: { margin: '6px 0 0', fontSize: 13.5, opacity: 0.75, color: '#0f172a' },
+  subtitle: { margin: '4px 0 0', fontSize: 13.5, opacity: 0.75, color: '#0f172a' },
 
   alert: {
     background: 'rgba(220,38,38,.08)',
@@ -160,11 +264,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13.5,
     lineHeight: 1.35,
   },
+  alertTitle: { fontWeight: 900, marginBottom: 4 },
+  alertBody: { fontWeight: 600, opacity: 0.95 },
+  alertHint: { marginTop: 8, fontSize: 12.5, opacity: 0.85, lineHeight: 1.35 },
 
-  form: { display: 'grid', gap: 12, marginTop: 12 },
+  form: { display: 'grid', gap: 12, marginTop: 10 },
+
   label: { display: 'grid', gap: 7 },
   labelRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  labelText: { fontSize: 12.5, fontWeight: 800, color: '#0f172a', opacity: 0.9 },
+  labelText: { fontSize: 12.5, fontWeight: 900, color: '#0f172a', opacity: 0.92 },
+
+  microHint: { fontSize: 12, opacity: 0.6, color: '#0f172a', lineHeight: 1.35 },
 
   input: {
     padding: '11px 12px',
@@ -176,11 +286,24 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#fff',
   },
 
+  pwWrap: { position: 'relative' },
+
+  capsWarn: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: '#92400e',
+    background: 'rgba(245,158,11,.14)',
+    border: '1px solid rgba(245,158,11,.22)',
+    padding: '6px 10px',
+    borderRadius: 999,
+    width: 'fit-content',
+  },
+
   linkBtn: {
     border: 'none',
     background: 'transparent',
     color: '#0369a1',
-    fontWeight: 800,
+    fontWeight: 900,
     fontSize: 12.5,
     cursor: 'pointer',
     padding: 0,
@@ -201,10 +324,11 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'not-allowed',
   },
 
-  hint: { margin: '10px 0 0', fontSize: 12, opacity: 0.65, color: '#0f172a', lineHeight: 1.4 },
+  hint: { margin: '10px 0 0', fontSize: 12, opacity: 0.65, color: '#0f172a', lineHeight: 1.45 },
+
   skeleton: {
     width: '100%',
-    maxWidth: 460,
+    maxWidth: 480,
     borderRadius: 18,
     border: '1px solid rgba(15,23,42,.10)',
     background: '#fff',
