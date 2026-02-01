@@ -70,42 +70,58 @@ function verifyAdminJwt(token: string): boolean {
 }
 
 function clearAdminCookie(res: NextResponse) {
-  // Clear cookie to prevent redirect loops caused by stale/invalid tokens.
   res.cookies.set(COOKIE_NAME, "", { path: "/", maxAge: 0 });
 }
 
-function isPublicAdminPath(pathname: string) {
-  // Always allow these to render/call without auth
-  return (
-    pathname === "/admin/login" ||
-    pathname.startsWith("/api/admin/auth")
-  );
+function isAdminSurface(pathname: string) {
+  return pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+}
+
+function isAdminApi(pathname: string) {
+  return pathname.startsWith("/api/admin");
+}
+
+function isAuthEndpoint(pathname: string) {
+  return pathname.startsWith("/api/admin/auth");
 }
 
 export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  const isAdminUI = pathname.startsWith("/admin");
-  const isAdminAPI = pathname.startsWith("/api/admin");
-
   // Only guard admin surfaces
-  if (!isAdminUI && !isAdminAPI) return NextResponse.next();
-
-  // Allow login + auth endpoints
-  if (isPublicAdminPath(pathname)) return NextResponse.next();
+  if (!isAdminSurface(pathname)) return NextResponse.next();
 
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  const ok = token ? verifyAdminJwt(token) : false;
+  const tokenValid = token ? verifyAdminJwt(token) : false;
 
-  if (!ok) {
-    // API: return 401 JSON
-    if (isAdminAPI) {
+  /**
+   * CRITICAL LOOP FIX:
+   * If user lands on /admin/login with an INVALID token cookie,
+   * the login page or layout might try to redirect to /admin.
+   * That bounces back to /admin/login again forever.
+   *
+   * So: always clear invalid cookie on /admin/login.
+   */
+  if (pathname === "/admin/login") {
+    if (token && !tokenValid) {
+      const res = NextResponse.next();
+      clearAdminCookie(res);
+      return res;
+    }
+    return NextResponse.next();
+  }
+
+  // Always allow auth endpoints to function (login/logout)
+  if (isAuthEndpoint(pathname)) return NextResponse.next();
+
+  // From here: all other /admin and /api/admin routes require a valid token
+  if (!tokenValid) {
+    if (isAdminApi(pathname)) {
       const res = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       clearAdminCookie(res);
       return res;
     }
 
-    // UI: redirect to login, preserving where user wanted to go
     const url = req.nextUrl.clone();
     url.pathname = "/admin/login";
     url.searchParams.set("next", `${pathname}${search || ""}`);
