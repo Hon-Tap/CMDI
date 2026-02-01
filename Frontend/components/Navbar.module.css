@@ -590,3 +590,10 @@
     transition: none !important;
   }
 }
+.adminLink{
+  font-size: 12px;
+  opacity: .6;
+  transition: opacity .2s ease;
+}
+.adminLink:hover{ opacity: 1; }
+
