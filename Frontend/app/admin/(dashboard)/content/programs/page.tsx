@@ -1,143 +1,434 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-
-export const dynamic = 'force-dynamic';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Program = {
-  id: number | string;
-  title?: string | null;
+  id?: number | string;
+  title?: string;
   description?: string | null;
   icon_name?: string | null;
-  created_at?: string | null;
 };
 
-function fmtDate(v?: string | null) {
-  if (!v) return '—';
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+type ApiResponse = { status?: string; data?: Program[]; total?: number } | Program[];
+
+function normalizePrograms(result: ApiResponse): { rows: Program[]; total: number } {
+  const rows = Array.isArray(result)
+    ? result
+    : Array.isArray((result as any)?.data)
+    ? ((result as any).data as Program[])
+    : [];
+
+  const total =
+    !Array.isArray(result) && typeof (result as any)?.total === "number"
+      ? (result as any).total
+      : rows.length;
+
+  return { rows, total };
 }
 
 export default function AdminProgramsPage() {
-  const [items, setItems] = useState<Program[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
-  const [q, setQ] = useState('');
+  const router = useRouter();
 
-  async function load() {
+  const API = "/api/admin/content/programs"; // ✅ correct structure
+
+  const [items, setItems] = useState<Program[]>([]);
+  const [total, setTotal] = useState(0);
+
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  // modal state
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Program | null>(null);
+
+  const [formTitle, setFormTitle] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formIcon, setFormIcon] = useState("");
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  const debouncedQ = useDebouncedValue(q, 350);
+
+  const fetchPrograms = async () => {
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     setLoading(true);
-    setErr('');
+    setErr("");
+
     try {
-      const res = await fetch('/api/admin/programs', { cache: 'no-store', credentials: 'include' });
-      if (!res.ok) {
-        const t = await res.text().catch(() => '');
-        throw new Error(`GET /api/admin/programs failed (${res.status}). ${t}`.trim());
+      const url = new URL(API, window.location.origin);
+      if (debouncedQ.trim()) url.searchParams.set("q", debouncedQ.trim());
+      url.searchParams.set("page", "1");
+      url.searchParams.set("pageSize", "50");
+
+      const res = await fetch(url.toString(), {
+        method: "GET",
+        cache: "no-store",
+        signal: ac.signal,
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        router.push(`/admin/login?next=${encodeURIComponent("/admin/content/programs")}`);
+        return;
       }
-      const data = await res.json();
-      setItems(Array.isArray(data) ? data : data.data ?? []);
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`GET ${API} failed (${res.status}). ${text.slice(0, 180)}`);
+      }
+
+      const result = (await res.json()) as ApiResponse;
+      const { rows, total } = normalizePrograms(result);
+
+      setItems(rows);
+      setTotal(total);
     } catch (e: any) {
-      setErr(e?.message || 'Failed to load programs.');
-      setItems([]);
+      if (e?.name === "AbortError") return;
+      console.error("[admin programs] fetch failed:", e);
+      setErr(e?.message || "Can’t load programs");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    load();
-  }, []);
+    fetchPrograms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQ]);
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return items;
-    return items.filter((p) => `${p.title ?? ''} ${p.icon_name ?? ''}`.toLowerCase().includes(s));
-  }, [items, q]);
+  const openCreate = () => {
+    setEditing(null);
+    setFormTitle("");
+    setFormDesc("");
+    setFormIcon("");
+    setOpen(true);
+  };
+
+  const openEdit = (p: Program) => {
+    setEditing(p);
+    setFormTitle(p.title ?? "");
+    setFormDesc(p.description ?? "");
+    setFormIcon(p.icon_name ?? "");
+    setOpen(true);
+  };
+
+  const submit = async () => {
+    setErr("");
+
+    const payload = {
+      title: formTitle.trim(),
+      description: formDesc.trim() || null,
+      icon_name: formIcon.trim() || null,
+    };
+
+    if (!payload.title) {
+      setErr("Title is required.");
+      return;
+    }
+
+    try {
+      const isEdit = Boolean(editing?.id);
+
+      const res = await fetch(API, {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isEdit ? { id: editing!.id, ...payload } : payload),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        router.push(`/admin/login?next=${encodeURIComponent("/admin/content/programs")}`);
+        return;
+      }
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`${isEdit ? "PATCH" : "POST"} failed (${res.status}). ${text.slice(0, 180)}`);
+      }
+
+      setOpen(false);
+      await fetchPrograms();
+    } catch (e: any) {
+      console.error("[admin programs] save failed:", e);
+      setErr(e?.message || "Save failed");
+    }
+  };
+
+  const remove = async (p: Program) => {
+    if (!p?.id) return;
+    const ok = window.confirm(`Delete "${p.title ?? "this program"}"?`);
+    if (!ok) return;
+
+    setErr("");
+
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(String(p.id))}`, {
+        method: "DELETE",
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        router.push(`/admin/login?next=${encodeURIComponent("/admin/content/programs")}`);
+        return;
+      }
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`DELETE failed (${res.status}). ${text.slice(0, 180)}`);
+      }
+
+      await fetchPrograms();
+    } catch (e: any) {
+      console.error("[admin programs] delete failed:", e);
+      setErr(e?.message || "Delete failed");
+    }
+  };
+
+  const subtitle = useMemo(() => {
+    if (loading) return "Loading…";
+    if (err) return "Can’t load programs";
+    return `${total} item(s)`;
+  }, [loading, err, total]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+    <main style={styles.page}>
+      <div style={styles.topRow}>
         <div>
-          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
-            <Link href="/admin" style={{ textDecoration: 'none' }}>Admin</Link> /{' '}
-            <Link href="/admin/content" style={{ textDecoration: 'none' }}>Content</Link> / Programs
-          </div>
-          <h1 style={{ margin: 0, fontSize: 28 }}>Programs</h1>
-          <p style={{ margin: '8px 0 0', opacity: 0.8 }}>Manage the programs shown on the public site.</p>
+          <div style={styles.breadcrumb}>Admin / Content / Programs</div>
+          <h1 style={styles.h1}>Programs</h1>
+          <p style={styles.p}>Manage the programs shown on the public site.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={load}
-            style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(0,0,0,.12)', background: 'white' }}
-          >
+        <div style={styles.actions}>
+          <button onClick={fetchPrograms} style={styles.btnGhost} disabled={loading}>
             Refresh
           </button>
-
-          <Link
-            href="/admin/content/programs/new"
-            style={{
-              padding: '10px 14px',
-              borderRadius: 12,
-              border: '1px solid rgba(0,0,0,.12)',
-              background: 'black',
-              color: 'white',
-              textDecoration: 'none',
-            }}
-          >
+          <button onClick={openCreate} style={styles.btnPrimary}>
             + New Program
-          </Link>
+          </button>
         </div>
-      </header>
+      </div>
 
-      <section style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={styles.searchRow}>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search programs…"
-          style={{ flex: '1 1 280px', padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(0,0,0,.15)' }}
+          style={styles.search}
         />
-        <div style={{ fontSize: 12, opacity: 0.75 }}>{loading ? 'Loading…' : `${filtered.length} item(s)`}</div>
-      </section>
+        <div style={styles.count}>{subtitle}</div>
+      </div>
 
       {err && (
-        <div style={{ marginTop: 14, padding: 14, borderRadius: 12, border: '1px solid rgba(255,0,0,.25)' }}>
-          <strong>Can’t load programs</strong>
-          <pre style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap', fontSize: 12 }}>{err}</pre>
+        <div style={styles.errorBox}>
+          <div style={styles.errorTitle}>Can’t load programs</div>
+          <div style={styles.errorText}>{err}</div>
         </div>
       )}
 
-      <section style={{ marginTop: 14, border: '1px solid rgba(0,0,0,.12)', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead style={{ background: 'rgba(0,0,0,.03)' }}>
+      <div style={styles.tableWrap}>
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Title</th>
+              <th style={styles.th}>Icon</th>
+              <th style={styles.th}>Description</th>
+              <th style={{ ...styles.th, width: 220 }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th style={{ textAlign: 'left', padding: 12 }}>Title</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Icon</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Created</th>
+                <td style={styles.td} colSpan={4}>
+                  Loading…
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={3} style={{ padding: 14, opacity: 0.8 }}>No programs.</td>
-                </tr>
-              )}
-              {filtered.map((p) => (
-                <tr key={String(p.id)} style={{ borderTop: '1px solid rgba(0,0,0,.08)' }}>
-                  <td style={{ padding: 12 }}>
-                    <div style={{ fontWeight: 600 }}>{p.title || '(Untitled)'}</div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>#{p.id}</div>
+            ) : items.length === 0 ? (
+              <tr>
+                <td style={styles.td} colSpan={4}>
+                  No programs found.
+                </td>
+              </tr>
+            ) : (
+              items.map((p) => (
+                <tr key={String(p.id ?? p.title)}>
+                  <td style={styles.tdStrong}>{p.title ?? "—"}</td>
+                  <td style={styles.tdMono}>{p.icon_name ?? "—"}</td>
+                  <td style={styles.td}>{p.description ?? "—"}</td>
+                  <td style={styles.td}>
+                    <div style={styles.rowActions}>
+                      <button style={styles.btnSmall} onClick={() => openEdit(p)}>
+                        Edit
+                      </button>
+                      <button style={styles.btnSmallDanger} onClick={() => remove(p)}>
+                        Delete
+                      </button>
+                    </div>
                   </td>
-                  <td style={{ padding: 12 }}>{p.icon_name || '—'}</td>
-                  <td style={{ padding: 12 }}>{fmtDate(p.created_at)}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {open && (
+        <div style={styles.backdrop} onClick={() => setOpen(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div style={styles.modalTitle}>{editing ? "Edit Program" : "New Program"}</div>
+              <button style={styles.btnGhost} onClick={() => setOpen(false)}>
+                Close
+              </button>
+            </div>
+
+            <div style={styles.form}>
+              <label style={styles.label}>Title</label>
+              <input
+                style={styles.input}
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="e.g. WASH Initiative"
+              />
+
+              <label style={styles.label}>Icon name</label>
+              <input
+                style={styles.input}
+                value={formIcon}
+                onChange={(e) => setFormIcon(e.target.value)}
+                placeholder="e.g. Droplets / BookOpen / Sprout / ShieldCheck"
+              />
+
+              <label style={styles.label}>Description</label>
+              <textarea
+                style={styles.textarea}
+                value={formDesc}
+                onChange={(e) => setFormDesc(e.target.value)}
+                placeholder="Short description…"
+              />
+
+              {err && <div style={styles.inlineErr}>{err}</div>}
+
+              <div style={styles.formActions}>
+                <button style={styles.btnGhost} onClick={() => setOpen(false)}>
+                  Cancel
+                </button>
+                <button style={styles.btnPrimary} onClick={submit}>
+                  {editing ? "Save changes" : "Create program"}
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.note}>
+              If Edit/Delete returns <b>501</b>, it means your <code>lib/crud</code> doesn’t export{" "}
+              <code>updateRow</code>/<code>deleteRow</code> yet — the GET/POST still work.
+            </div>
+          </div>
         </div>
-      </section>
+      )}
     </main>
   );
 }
+
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  page: { padding: "28px", maxWidth: 1180, margin: "0 auto" },
+  topRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 },
+  breadcrumb: { fontSize: 13, opacity: 0.7, marginBottom: 10 },
+  h1: { fontSize: 34, margin: 0, fontWeight: 750 },
+  p: { marginTop: 8, opacity: 0.75 },
+  actions: { display: "flex", gap: 10 },
+  btnGhost: {
+    padding: "10px 14px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,.12)",
+    background: "#fff",
+    cursor: "pointer",
+  },
+  btnPrimary: {
+    padding: "10px 14px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,.08)",
+    background: "#000",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  searchRow: { display: "flex", alignItems: "center", gap: 12, marginTop: 18 },
+  search: {
+    flex: 1,
+    padding: "12px 14px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,.12)",
+    outline: "none",
+  },
+  count: { fontSize: 13, opacity: 0.7, minWidth: 90, textAlign: "right" },
+  errorBox: {
+    marginTop: 16,
+    border: "1px solid rgba(220, 38, 38, .35)",
+    background: "rgba(220, 38, 38, .06)",
+    borderRadius: 14,
+    padding: 14,
+  },
+  errorTitle: { fontWeight: 700, marginBottom: 6 },
+  errorText: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, lineHeight: 1.5 },
+  tableWrap: {
+    marginTop: 16,
+    border: "1px solid rgba(0,0,0,.10)",
+    borderRadius: 16,
+    overflow: "hidden",
+    background: "#fff",
+  },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { textAlign: "left", padding: "12px 14px", fontSize: 13, opacity: 0.7, borderBottom: "1px solid rgba(0,0,0,.08)" },
+  td: { padding: "12px 14px", borderBottom: "1px solid rgba(0,0,0,.06)", verticalAlign: "top" },
+  tdStrong: { padding: "12px 14px", borderBottom: "1px solid rgba(0,0,0,.06)", fontWeight: 650 },
+  tdMono: {
+    padding: "12px 14px",
+    borderBottom: "1px solid rgba(0,0,0,.06)",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+    fontSize: 12,
+  },
+  rowActions: { display: "flex", gap: 10 },
+  btnSmall: {
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid rgba(0,0,0,.12)",
+    background: "#fff",
+    cursor: "pointer",
+  },
+  btnSmallDanger: {
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid rgba(220, 38, 38, .35)",
+    background: "rgba(220, 38, 38, .06)",
+    cursor: "pointer",
+  },
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,.35)",
+    display: "grid",
+    placeItems: "center",
+    padding: 18,
+  },
+  modal: { width: "min(720px, 100%)", borderRadius: 18, background: "#fff", border: "1px solid rgba(0,0,0,.10)" },
+  modalHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: 14, borderBottom: "1px solid rgba(0,0,0,.08)" },
+  modalTitle: { fontWeight: 750, fontSize: 16 },
+  form: { padding: 14, display: "grid", gap: 10 },
+  label: { fontSize: 13, opacity: 0.8, marginTop: 6 },
+  input: { padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(0,0,0,.12)", outline: "none" },
+  textarea: { padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(0,0,0,.12)", outline: "none", minHeight: 110, resize: "vertical" },
+  inlineErr: { color: "rgb(220, 38, 38)", fontSize: 13, marginTop: 6 },
+  formActions: { display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 },
+  note: { padding: "0 14px 14px", fontSize: 12, opacity: 0.7 },
+};
