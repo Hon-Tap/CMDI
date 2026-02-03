@@ -1,269 +1,393 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  Newspaper, 
-  CalendarRange, 
-  Image as ImageIcon, 
-  Inbox, 
-  Settings, 
-  LogOut, 
-  ExternalLink 
-} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: React.ElementType;
+export const dynamic = "force-dynamic";
+
+type Project = {
+  id: number | string;
+  title?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  status?: string | null;
+  location?: string | null;
+  category?: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
 };
 
-type NavGroup = {
-  title: string;
-  items: NavItem[];
+type Meta = { page: number; pageSize: number; total: number };
+
+type ApiList<T> =
+  | T[]
+  | {
+      data?: T[];
+      meta?: { page?: number; pageSize?: number; total?: number };
+    };
+
+function fmtDate(v?: string | null) {
+  if (!v) return "—";
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+}
+
+function normalizeList<T>(payload: ApiList<T>): { data: T[]; meta?: Meta } {
+  if (Array.isArray(payload)) return { data: payload };
+  const m = payload.meta;
+  const hasMeta =
+    m && typeof m.page === "number" && typeof m.pageSize === "number" && typeof m.total === "number";
+  return { data: payload.data ?? [], meta: hasMeta ? (m as Meta) : undefined };
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+const styles = {
+  page: { padding: 24, maxWidth: 1100, margin: "0 auto" } as const,
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 14,
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+  } as const,
+  crumbs: { fontSize: 12, opacity: 0.7, marginBottom: 8 } as const,
+  h1: { margin: 0, fontSize: 28 } as const,
+  subtitle: { margin: "8px 0 0", opacity: 0.8 } as const,
+
+  toolbar: { marginTop: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } as const,
+  input: {
+    flex: "1 1 320px",
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,.15)",
+  } as const,
+
+  small: { fontSize: 12, opacity: 0.75 } as const,
+
+  card: { marginTop: 14, border: "1px solid rgba(0,0,0,.12)", borderRadius: 16, overflow: "hidden" } as const,
+  tableWrap: { overflowX: "auto" } as const,
+  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 } as const,
+  thead: { background: "rgba(0,0,0,.03)" } as const,
+  th: { textAlign: "left", padding: 12 } as const,
+  thRight: { textAlign: "right", padding: 12 } as const,
+  tr: { borderTop: "1px solid rgba(0,0,0,.08)" } as const,
+  td: { padding: 12 } as const,
+  tdRight: { padding: 12, textAlign: "right" } as const,
+
+  pillRow: { display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" } as const,
+
+  btn: {
+    padding: "10px 14px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,.12)",
+    background: "white",
+    cursor: "pointer",
+  } as const,
+  btnDisabled: { opacity: 0.5, cursor: "not-allowed" } as const,
+  btnPrimaryLink: {
+    padding: "10px 14px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,.12)",
+    background: "black",
+    color: "white",
+    textDecoration: "none",
+  } as const,
+  btnLink: {
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid rgba(0,0,0,.12)",
+    textDecoration: "none",
+  } as const,
+  btnDanger: {
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,0,0,.35)",
+    background: "white",
+    cursor: "pointer",
+  } as const,
+
+  errorBox: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+    border: "1px solid rgba(255,0,0,.25)",
+    background: "rgba(255,0,0,.03)",
+  } as const,
+  pre: { margin: "10px 0 0", whiteSpace: "pre-wrap", fontSize: 12 } as const,
 };
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
+export default function AdminProjectsListPage() {
+  const [items, setItems] = useState<Project[]>([]);
+  const [meta, setMeta] = useState<Meta | null>(null);
 
-  // Grouped navigation to match your folder structure and avoid 404s
-  const navGroups: NavGroup[] = useMemo(() => [
-    {
-      title: "Overview",
-      items: [
-        { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-      ]
-    },
-    {
-      title: "Content Management",
-      items: [
-        { href: "/admin/content/projects", label: "Projects", icon: FolderKanban },
-        { href: "/admin/content/programs", label: "Programs", icon: CalendarRange },
-        { href: "/admin/content/news", label: "News & Updates", icon: Newspaper },
-      ]
-    },
-    {
-      title: "System",
-      items: [
-        { href: "/admin/media", label: "Media Library", icon: ImageIcon },
-        { href: "/admin/inbox", label: "Inbox", icon: Inbox },
-        { href: "/admin/settings", label: "Settings", icon: Settings },
-      ]
-    }
-  ], []);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string>("");
 
-  async function logout() {
+  // UX state
+  const [q, setQ] = useState("");
+  const debouncedQ = useDebouncedValue(q, 350);
+
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const endpoint = useMemo(() => "/api/admin/content/projects", []);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const canPrev = page > 1;
+  const canNext = meta ? page * meta.pageSize < meta.total : items.length === pageSize;
+
+  const countLabel = useMemo(() => {
+    if (loading) return "Loading…";
+    if (meta) return `${meta.total} total`;
+    return `${items.length} item(s)`;
+  }, [loading, meta, items.length]);
+
+  async function load(nextPage = page, nextQ = debouncedQ) {
+    // cancel previous request
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    setLoading(true);
+    setErr("");
+
     try {
-      setLoggingOut(true);
-      await fetch("/api/admin/auth/logout", { method: "POST" });
+      const url = new URL(endpoint, window.location.origin);
+      url.searchParams.set("page", String(nextPage));
+      url.searchParams.set("pageSize", String(pageSize));
+      if (nextQ.trim()) url.searchParams.set("q", nextQ.trim());
+
+      const res = await fetch(url.toString(), {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+        signal: ac.signal,
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        if (res.status === 401 || res.status === 403) {
+          throw new Error(`Unauthorized. Please log in at /admin/login.\n\n${t}`.trim());
+        }
+        throw new Error(`Failed to load projects (${res.status}).\n\n${t}`.trim());
+      }
+
+      const json = (await res.json()) as ApiList<Project>;
+      const normalized = normalizeList(json);
+
+      setItems(normalized.data);
+      setMeta(normalized.meta ?? null);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setErr(e?.message || "Failed to load projects.");
+      setItems([]);
+      setMeta(null);
     } finally {
-      setLoggingOut(false);
-      router.replace("/admin/login");
-      router.refresh();
+      setLoading(false);
     }
   }
 
+  async function archiveOrDelete(id: Project["id"]) {
+    const choice = window.prompt(
+      `Type one of these:\n\n` +
+        `- archive  (recommended, reversible)\n` +
+        `- delete   (hard delete, irreversible)\n\n` +
+        `Then press OK.\n`
+    );
+
+    const action = (choice || "").trim().toLowerCase();
+    if (action !== "archive" && action !== "delete") return;
+
+    const confirmMsg =
+      action === "archive"
+        ? "Archive this project? (It will be hidden, not permanently deleted)"
+        : "HARD DELETE this project? This cannot be undone.";
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const url =
+        action === "delete"
+          ? `/api/admin/content/projects/${id}?hard=1`
+          : `/api/admin/content/projects/${id}`;
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`Action failed (${res.status}).\n\n${t}`.trim());
+      }
+
+      // Reload current page; if it becomes empty, go back one page
+      await load(page, debouncedQ);
+      if (items.length === 1 && page > 1) setPage((p) => p - 1);
+    } catch (e: any) {
+      alert(e?.message || "Failed.");
+    }
+  }
+
+  // Load on mount + when page changes OR search changes
+  useEffect(() => {
+    // If query changes, reset to page 1 first
+    if (page !== 1 && debouncedQ !== q) {
+      // (debouncedQ lags q, so this condition is just defensive)
+    }
+    load(page, debouncedQ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedQ]);
+
+  // When debounced query changes, jump back to page 1
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQ]);
+
   return (
-    <div style={styles.page}>
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
-        <div style={styles.brandContainer}>
-          <div style={styles.logoCircle}>
-            <span style={{ color: 'white', fontWeight: 900, fontSize: 14 }}>C</span>
+    <main style={styles.page}>
+      <header style={styles.header}>
+        <div>
+          <div style={styles.crumbs}>
+            <Link href="/admin" style={{ textDecoration: "none" }}>
+              Admin
+            </Link>{" "}
+            /{" "}
+            <Link href="/admin/content" style={{ textDecoration: "none" }}>
+              Content
+            </Link>{" "}
+            / Projects
           </div>
-          <div>
-            <div style={styles.brandTitle}>CMDI Admin</div>
-            <div style={styles.brandSub}>Workspace</div>
-          </div>
+
+          <h1 style={styles.h1}>Projects</h1>
+          <p style={styles.subtitle}>Create, edit, preview, publish. This becomes your CMS backbone.</p>
         </div>
 
-        <div style={styles.scrollableNav}>
-          {navGroups.map((group) => (
-            <div key={group.title} style={styles.navGroup}>
-              <div style={styles.groupTitle}>{group.title}</div>
-              <div style={styles.groupItems}>
-                {group.items.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      style={{
-                        ...styles.navItem,
-                        ...(isActive ? styles.navItemActive : {}),
-                      }}
-                    >
-                      <item.icon size={18} style={isActive ? { color: '#0ea5e9' } : { opacity: 0.7 }} />
-                      <span style={{ fontWeight: isActive ? 600 : 400 }}>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => load(page, debouncedQ)} style={styles.btn}>
+            Refresh
+          </button>
 
-        <div style={styles.sidebarFooter}>
-          <button 
-            onClick={logout} 
-            disabled={loggingOut} 
-            style={styles.logoutBtn}
+          <Link href="/admin/content/projects/new" style={styles.btnPrimaryLink}>
+            + New Project
+          </Link>
+        </div>
+      </header>
+
+      <section style={styles.toolbar}>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by title, status, category, location…"
+          style={styles.input}
+        />
+
+        <div style={styles.small}>{countLabel}</div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            disabled={!canPrev || loading}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            style={{ ...styles.btn, ...(canPrev && !loading ? null : styles.btnDisabled) }}
           >
-            <LogOut size={16} />
-            {loggingOut ? "Signing out..." : "Sign out"}
+            Prev
+          </button>
+
+          <div style={styles.small}>Page {meta?.page ?? page}</div>
+
+          <button
+            type="button"
+            disabled={!canNext || loading}
+            onClick={() => setPage((p) => p + 1)}
+            style={{ ...styles.btn, ...(canNext && !loading ? null : styles.btnDisabled) }}
+          >
+            Next
           </button>
         </div>
-      </aside>
+      </section>
 
-      {/* Main Content Area */}
-      <div style={styles.main}>
-        <header style={styles.header}>
-          <div style={styles.breadcrumbs}>
-             <span style={{opacity: 0.5}}>Admin</span> 
-             {pathname !== '/admin' && <span style={{opacity: 0.3}}> / </span>}
-             {pathname !== '/admin' && <span style={{textTransform: 'capitalize'}}>{pathname.split('/').pop()}</span>}
+      {err && (
+        <div style={styles.errorBox}>
+          <strong>Can’t load projects</strong>
+          <pre style={styles.pre}>{err}</pre>
+          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>
+            If this is an auth issue, log in at <Link href="/admin/login">/admin/login</Link>.
           </div>
-          <Link href="/" style={styles.siteLink} target="_blank">
-            View Live Site <ExternalLink size={14} />
-          </Link>
-        </header>
+        </div>
+      )}
 
-        <main style={styles.content}>
-          {children}
-        </main>
-      </div>
-    </div>
+      <section style={styles.card}>
+        <div style={styles.tableWrap}>
+          <table style={styles.table}>
+            <thead style={styles.thead}>
+              <tr>
+                <th style={styles.th}>Title</th>
+                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Category</th>
+                <th style={styles.th}>Location</th>
+                <th style={styles.th}>Updated</th>
+                <th style={styles.thRight}>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {!loading && items.length === 0 && !err && (
+                <tr>
+                  <td colSpan={6} style={{ padding: 14, opacity: 0.8 }}>
+                    No projects found.
+                  </td>
+                </tr>
+              )}
+
+              {items.map((p) => (
+                <tr key={String(p.id)} style={styles.tr}>
+                  <td style={styles.td}>
+                    <div style={{ fontWeight: 600 }}>{p.title || "(Untitled)"}</div>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>#{p.id}</div>
+                  </td>
+
+                  <td style={{ ...styles.td, textTransform: "capitalize" }}>{p.status || "draft"}</td>
+                  <td style={styles.td}>{p.category || "—"}</td>
+                  <td style={styles.td}>{p.location || "—"}</td>
+                  <td style={styles.td}>{fmtDate(p.updated_at || p.created_at)}</td>
+
+                  <td style={styles.tdRight}>
+                    <div style={styles.pillRow}>
+                      <Link href={`/admin/content/projects/${p.id}/preview`} style={styles.btnLink}>
+                        Preview
+                      </Link>
+                      <Link href={`/admin/content/projects/${p.id}/edit`} style={styles.btnLink}>
+                        Edit
+                      </Link>
+                      <button type="button" onClick={() => archiveOrDelete(p.id)} style={styles.btnDanger}>
+                        Archive/Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {loading && (
+                <tr>
+                  <td colSpan={6} style={{ padding: 14, opacity: 0.8 }}>
+                    Loading…
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   );
 }
-
-// Styles
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    display: "grid",
-    gridTemplateColumns: "260px 1fr",
-    background: "#f8fafc", // Slate-50
-    fontFamily: "system-ui, -apple-system, sans-serif",
-  },
-  sidebar: {
-    borderRight: "1px solid #e2e8f0",
-    background: "#ffffff",
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
-    position: "sticky",
-    top: 0,
-  },
-  brandContainer: {
-    padding: "24px 20px",
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    borderBottom: "1px solid #f1f5f9",
-  },
-  logoCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 2px 4px rgba(14, 165, 233, 0.2)",
-  },
-  brandTitle: { fontWeight: 700, fontSize: 15, color: "#0f172a", lineHeight: 1.2 },
-  brandSub: { fontSize: 12, color: "#64748b" },
-  
-  scrollableNav: {
-    flex: 1,
-    padding: "20px 16px",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
-  },
-  navGroup: { display: "flex", flexDirection: "column", gap: 8 },
-  groupTitle: { 
-    fontSize: 11, 
-    textTransform: "uppercase", 
-    letterSpacing: "0.05em", 
-    color: "#94a3b8", 
-    fontWeight: 700, 
-    paddingLeft: 12 
-  },
-  groupItems: { display: "flex", flexDirection: "column", gap: 2 },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "10px 12px",
-    borderRadius: 8,
-    textDecoration: "none",
-    color: "#475569",
-    fontSize: 14,
-    transition: "all 0.2s ease",
-  },
-  navItemActive: {
-    background: "#f0f9ff", // Sky-50
-    color: "#0284c7", // Sky-700
-  },
-  
-  sidebarFooter: {
-    padding: 16,
-    borderTop: "1px solid #f1f5f9",
-  },
-  logoutBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: 8,
-    background: "white",
-    color: "#64748b",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    transition: "background 0.2s",
-  },
-  
-  main: { display: "flex", flexDirection: "column", minWidth: 0 },
-  header: {
-    height: 64,
-    borderBottom: "1px solid #e2e8f0",
-    background: "rgba(255,255,255,0.8)",
-    backdropFilter: "blur(8px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 32px",
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-  },
-  breadcrumbs: { fontSize: 14, fontWeight: 500, color: "#334155" },
-  siteLink: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#0ea5e9",
-    textDecoration: "none",
-    padding: "6px 12px",
-    borderRadius: 6,
-    background: "rgba(14,165,233, 0.1)",
-  },
-  content: {
-    padding: 32,
-    maxWidth: 1200,
-    width: "100%",
-    margin: "0 auto",
-  },
-};

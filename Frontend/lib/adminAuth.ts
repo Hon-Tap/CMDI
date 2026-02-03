@@ -2,16 +2,20 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 
 const COOKIE_NAME = "cmdi_admin";
-const SECRET = process.env.ADMIN_JWT_SECRET || "dev-secret";
+const SECRET = process.env.ADMIN_JWT_SECRET;
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
-type Payload = {
+type AdminPayload = {
+  id: string | number;
+  email: string;
   role: "admin";
   iat: number;
   exp: number;
 };
 
-function b64url(input: Buffer | string) {
+// --- Utility Helpers ---
+
+function b64url(input: Buffer | string): string {
   const buf = Buffer.isBuffer(input) ? input : Buffer.from(input);
   return buf
     .toString("base64")
@@ -20,17 +24,31 @@ function b64url(input: Buffer | string) {
     .replace(/\//g, "_");
 }
 
-function b64urlJson(obj: any) {
+function b64urlJson(obj: any): string {
   return b64url(JSON.stringify(obj));
 }
 
-function sign(data: string) {
+function sign(data: string): string {
+  if (!SECRET) {
+    throw new Error("ADMIN_JWT_SECRET is not defined in environment variables");
+  }
   return b64url(crypto.createHmac("sha256", SECRET).update(data).digest());
 }
 
-export async function issueAdminToken() {
+// --- Core Functions ---
+
+/**
+ * Generates a signed JWT for the admin user
+ */
+export async function issueAdminToken(user: { id: string | number; email: string }) {
   const now = Math.floor(Date.now() / 1000);
-  const payload: Payload = { role: "admin", iat: now, exp: now + MAX_AGE_SECONDS };
+  const payload: AdminPayload = {
+    id: user.id,
+    email: user.email,
+    role: "admin",
+    iat: now,
+    exp: now + MAX_AGE_SECONDS,
+  };
 
   const header = { alg: "HS256", typ: "JWT" };
 
@@ -42,46 +60,67 @@ export async function issueAdminToken() {
   return `${toSign}.${sig}`;
 }
 
-export async function verifyAdminToken(token: string) {
+/**
+ * Validates the token string and returns the payload
+ */
+export async function verifyAdminToken(token: string): Promise<AdminPayload> {
   const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("Invalid token");
+  if (parts.length !== 3) throw new Error("Invalid token format");
 
   const [p1, p2, sig] = parts;
-  const expected = sign(`${p1}.${p2}`);
-  if (sig !== expected) throw new Error("Bad signature");
+  
+  // Validate Signature
+  const expectedSig = sign(`${p1}.${p2}`);
+  if (sig !== expectedSig) throw new Error("Invalid token signature");
 
+  // Parse Payload
   const json = Buffer.from(p2.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
-  const payload = JSON.parse(json) as Payload;
+  const payload = JSON.parse(json) as AdminPayload;
 
-  if (payload.role !== "admin") throw new Error("Not admin");
+  // Validate Logic
+  if (payload.role !== "admin") throw new Error("Unauthorized role");
+  
   const now = Math.floor(Date.now() / 1000);
-  if (payload.exp < now) throw new Error("Expired");
+  if (payload.exp < now) throw new Error("Token expired");
 
   return payload;
 }
 
+/**
+ * Used in Server Components or Middleware to protect routes
+ */
 export async function requireAdminFromCookies() {
-  const token = cookies().get(COOKIE_NAME)?.value;
-  if (!token) throw new Error("Unauthorized");
-  await verifyAdminToken(token);
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!token) throw new Error("No admin session found");
+
+  try {
+    return await verifyAdminToken(token);
+  } catch (err) {
+    throw new Error("Invalid admin session");
+  }
 }
 
-export async function setAdminCookie(token: string) {
-  cookies().set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: MAX_AGE_SECONDS,
+/**
+ * Clears the admin session
+ */
+export async function clearAdminCookie() {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, "", { 
+    path: "/", 
+    maxAge: 0,
+    httpOnly: true 
   });
 }
 
-export function clearAdminCookie() {
-  cookies().set(COOKIE_NAME, "", { path: "/", maxAge: 0 });
-}
-
-export async function checkPassword(password: string) {
-  // simple compare for now (since you said no .env locally, this is a Vercel env var)
-  const plain = process.env.ADMIN_PASSWORD || "";
-  return password === plain;
+/**
+ * Helper to get the current admin user from cookies without throwing
+ */
+export async function getAdminUser() {
+  try {
+    return await requireAdminFromCookies();
+  } catch {
+    return null;
+  }
 }

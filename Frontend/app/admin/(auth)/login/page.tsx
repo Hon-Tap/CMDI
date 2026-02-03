@@ -3,23 +3,28 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// --- Types ---
 type ApiError = {
   error?: string;
   details?: string;
   message?: string;
 };
 
+// --- Helpers ---
 function safeNext(next: string | null) {
   if (!next) return '/admin';
-  // Only allow internal relative paths
+  // Only allow internal relative paths to prevent Open Redirect vulnerabilities
   if (next.startsWith('/') && !next.startsWith('//')) return next;
   return '/admin';
 }
+
+// --- Components ---
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Determine where to redirect after login
   const nextParam = useMemo(() => safeNext(searchParams.get('next')), [searchParams]);
 
   const [email, setEmail] = useState('admin@cmdi-ss.org');
@@ -41,7 +46,7 @@ function LoginForm() {
   }, []);
 
   const cleanEmail = email.trim().toLowerCase();
-  const canSubmit = cleanEmail.length > 3 && password.length >= 6 && !loading;
+  const canSubmit = cleanEmail.length > 3 && password.length >= 1 && !loading;
 
   function setApiErrorFromResponse(payload: ApiError | null) {
     const msg =
@@ -64,6 +69,8 @@ function LoginForm() {
     abortRef.current = new AbortController();
 
     try {
+      // NOTE: This points to your Next.js API route. 
+      // Ensure app/api/admin/auth/login/route.ts exists and handles the logic.
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -126,7 +133,7 @@ function LoginForm() {
           <div style={styles.alertTitle}>Error</div>
           <div style={styles.alertBody}>{error}</div>
 
-          {/* Helpful hint for your current known failure mode */}
+          {/* Helpful hint for common database connection failures */}
           {error.toLowerCase().includes('econnrefused') || error.includes('127.0.0.1:5432') ? (
             <div style={styles.alertHint}>
               This usually means the API tried to connect to <code>127.0.0.1:5432</code>. On Vercel that happens when
@@ -151,9 +158,6 @@ function LoginForm() {
             style={styles.input}
             aria-invalid={Boolean(error) || undefined}
           />
-          <span style={styles.microHint}>
-            Use the admin email address. (Lower/upper case doesn’t matter.)
-          </span>
         </label>
 
         <label style={styles.label}>
@@ -194,25 +198,24 @@ function LoginForm() {
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
-
-        <p style={styles.hint}>
-          Tip: If you get a 500 with <code>ECONNREFUSED 127.0.0.1:5432</code>, the server is not using the remote
-          database URL. Confirm <code>DATABASE_URL</code> is set for <b>Preview</b> and <b>Redeploy</b> that preview.
-        </p>
       </form>
     </div>
   );
 }
 
+// --- Main Page Component ---
+
 export default function Page() {
   return (
     <main style={styles.page}>
-      <Suspense fallback={<div style={styles.skeleton}>Loading…</div>}>
+      <Suspense fallback={<div style={styles.skeleton}>Loading login...</div>}>
         <LoginForm />
       </Suspense>
     </main>
   );
 }
+
+// --- Styles ---
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
