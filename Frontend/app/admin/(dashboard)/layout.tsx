@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import AdminShell from "./shell";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
-  title: "Admin",
+  title: "CMDI Admin",
   robots: {
     index: false,
     follow: false,

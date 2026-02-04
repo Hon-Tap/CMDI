@@ -1,393 +1,589 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  FolderKanban,
+  CalendarRange,
+  Newspaper,
+  Image as ImageIcon,
+  Inbox,
+  Settings,
+  Shield,
+  ExternalLink,
+  LogOut,
+  Menu,
+  X,
+  ChevronRight,
+  Search,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-type Project = {
-  id: number | string;
-  title?: string | null;
-  description?: string | null;
-  image_url?: string | null;
-  status?: string | null;
-  location?: string | null;
-  category?: string | null;
-  updated_at?: string | null;
-  created_at?: string | null;
+type NavItem = {
+  label: string;
+  href: string;
+  icon: any;
 };
 
-type Meta = { page: number; pageSize: number; total: number };
+export default function AdminShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname() || "/admin";
+  const router = useRouter();
 
-type ApiList<T> =
-  | T[]
-  | {
-      data?: T[];
-      meta?: { page?: number; pageSize?: number; total?: number };
-    };
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [filter, setFilter] = useState("");
 
-function fmtDate(v?: string | null) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
+  const nav: { section: string; items: NavItem[] }[] = useMemo(
+    () => [
+      {
+        section: "Overview",
+        items: [{ label: "Dashboard", href: "/admin", icon: LayoutDashboard }],
+      },
+      {
+        section: "Content",
+        items: [
+          { label: "Projects", href: "/admin/content/projects", icon: FolderKanban },
+          { label: "Programs", href: "/admin/content/programs", icon: CalendarRange },
+          { label: "News", href: "/admin/content/news", icon: Newspaper },
+        ],
+      },
+      {
+        section: "Library",
+        items: [{ label: "Media", href: "/admin/media", icon: ImageIcon }],
+      },
+      {
+        section: "Communication",
+        items: [{ label: "Inbox", href: "/admin/inbox", icon: Inbox }],
+      },
+      {
+        section: "System",
+        items: [{ label: "Settings", href: "/admin/settings", icon: Settings }],
+      },
+    ],
+    []
+  );
 
-function normalizeList<T>(payload: ApiList<T>): { data: T[]; meta?: Meta } {
-  if (Array.isArray(payload)) return { data: payload };
-  const m = payload.meta;
-  const hasMeta =
-    m && typeof m.page === "number" && typeof m.pageSize === "number" && typeof m.total === "number";
-  return { data: payload.data ?? [], meta: hasMeta ? (m as Meta) : undefined };
-}
+  const filteredNav = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return nav;
 
-function useDebouncedValue<T>(value: T, delayMs: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(t);
-  }, [value, delayMs]);
-  return debounced;
-}
+    return nav
+      .map((s) => ({
+        ...s,
+        items: s.items.filter(
+          (i) => i.label.toLowerCase().includes(q) || i.href.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((s) => s.items.length > 0);
+  }, [filter, nav]);
 
-const styles = {
-  page: { padding: 24, maxWidth: 1100, margin: "0 auto" } as const,
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 14,
-    alignItems: "flex-start",
-    flexWrap: "wrap",
-  } as const,
-  crumbs: { fontSize: 12, opacity: 0.7, marginBottom: 8 } as const,
-  h1: { margin: 0, fontSize: 28 } as const,
-  subtitle: { margin: "8px 0 0", opacity: 0.8 } as const,
+  const crumbs = useMemo(() => {
+    const parts = pathname.split("/").filter(Boolean);
+    // Make "Admin" the root crumb always
+    const out: Array<{ label: string; href: string }> = [{ label: "Admin", href: "/admin" }];
 
-  toolbar: { marginTop: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } as const,
-  input: {
-    flex: "1 1 320px",
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid rgba(0,0,0,.15)",
-  } as const,
+    let acc = "";
+    for (let i = 1; i < parts.length; i++) {
+      acc += `/${parts[i]}`;
+      out.push({
+        label: parts[i].replace(/-/g, " "),
+        href: `/` + parts.slice(0, i + 1).join("/"),
+      });
+    }
 
-  small: { fontSize: 12, opacity: 0.75 } as const,
+    return out;
+  }, [pathname]);
 
-  card: { marginTop: 14, border: "1px solid rgba(0,0,0,.12)", borderRadius: 16, overflow: "hidden" } as const,
-  tableWrap: { overflowX: "auto" } as const,
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 } as const,
-  thead: { background: "rgba(0,0,0,.03)" } as const,
-  th: { textAlign: "left", padding: 12 } as const,
-  thRight: { textAlign: "right", padding: 12 } as const,
-  tr: { borderTop: "1px solid rgba(0,0,0,.08)" } as const,
-  td: { padding: 12 } as const,
-  tdRight: { padding: 12, textAlign: "right" } as const,
-
-  pillRow: { display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" } as const,
-
-  btn: {
-    padding: "10px 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(0,0,0,.12)",
-    background: "white",
-    cursor: "pointer",
-  } as const,
-  btnDisabled: { opacity: 0.5, cursor: "not-allowed" } as const,
-  btnPrimaryLink: {
-    padding: "10px 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(0,0,0,.12)",
-    background: "black",
-    color: "white",
-    textDecoration: "none",
-  } as const,
-  btnLink: {
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid rgba(0,0,0,.12)",
-    textDecoration: "none",
-  } as const,
-  btnDanger: {
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid rgba(255,0,0,.35)",
-    background: "white",
-    cursor: "pointer",
-  } as const,
-
-  errorBox: {
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 12,
-    border: "1px solid rgba(255,0,0,.25)",
-    background: "rgba(255,0,0,.03)",
-  } as const,
-  pre: { margin: "10px 0 0", whiteSpace: "pre-wrap", fontSize: 12 } as const,
-};
-
-export default function AdminProjectsListPage() {
-  const [items, setItems] = useState<Project[]>([]);
-  const [meta, setMeta] = useState<Meta | null>(null);
-
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string>("");
-
-  // UX state
-  const [q, setQ] = useState("");
-  const debouncedQ = useDebouncedValue(q, 350);
-
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
-
-  const endpoint = useMemo(() => "/api/admin/content/projects", []);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const canPrev = page > 1;
-  const canNext = meta ? page * meta.pageSize < meta.total : items.length === pageSize;
-
-  const countLabel = useMemo(() => {
-    if (loading) return "Loading…";
-    if (meta) return `${meta.total} total`;
-    return `${items.length} item(s)`;
-  }, [loading, meta, items.length]);
-
-  async function load(nextPage = page, nextQ = debouncedQ) {
-    // cancel previous request
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    setLoading(true);
-    setErr("");
-
+  async function logout() {
     try {
-      const url = new URL(endpoint, window.location.origin);
-      url.searchParams.set("page", String(nextPage));
-      url.searchParams.set("pageSize", String(pageSize));
-      if (nextQ.trim()) url.searchParams.set("q", nextQ.trim());
-
-      const res = await fetch(url.toString(), {
-        method: "GET",
+      await fetch("/api/admin/auth/logout", {
+        method: "POST",
+        credentials: "include",
         cache: "no-store",
-        credentials: "include",
-        signal: ac.signal,
       });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        if (res.status === 401 || res.status === 403) {
-          throw new Error(`Unauthorized. Please log in at /admin/login.\n\n${t}`.trim());
-        }
-        throw new Error(`Failed to load projects (${res.status}).\n\n${t}`.trim());
-      }
-
-      const json = (await res.json()) as ApiList<Project>;
-      const normalized = normalizeList(json);
-
-      setItems(normalized.data);
-      setMeta(normalized.meta ?? null);
-    } catch (e: any) {
-      if (e?.name === "AbortError") return;
-      setErr(e?.message || "Failed to load projects.");
-      setItems([]);
-      setMeta(null);
+    } catch {
+      // ignore; we still route away
     } finally {
-      setLoading(false);
+      setMobileOpen(false);
+      router.push("/admin/login");
+      router.refresh();
     }
   }
-
-  async function archiveOrDelete(id: Project["id"]) {
-    const choice = window.prompt(
-      `Type one of these:\n\n` +
-        `- archive  (recommended, reversible)\n` +
-        `- delete   (hard delete, irreversible)\n\n` +
-        `Then press OK.\n`
-    );
-
-    const action = (choice || "").trim().toLowerCase();
-    if (action !== "archive" && action !== "delete") return;
-
-    const confirmMsg =
-      action === "archive"
-        ? "Archive this project? (It will be hidden, not permanently deleted)"
-        : "HARD DELETE this project? This cannot be undone.";
-
-    if (!window.confirm(confirmMsg)) return;
-
-    try {
-      const url =
-        action === "delete"
-          ? `/api/admin/content/projects/${id}?hard=1`
-          : `/api/admin/content/projects/${id}`;
-
-      const res = await fetch(url, {
-        method: "DELETE",
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`Action failed (${res.status}).\n\n${t}`.trim());
-      }
-
-      // Reload current page; if it becomes empty, go back one page
-      await load(page, debouncedQ);
-      if (items.length === 1 && page > 1) setPage((p) => p - 1);
-    } catch (e: any) {
-      alert(e?.message || "Failed.");
-    }
-  }
-
-  // Load on mount + when page changes OR search changes
-  useEffect(() => {
-    // If query changes, reset to page 1 first
-    if (page !== 1 && debouncedQ !== q) {
-      // (debouncedQ lags q, so this condition is just defensive)
-    }
-    load(page, debouncedQ);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedQ]);
-
-  // When debounced query changes, jump back to page 1
-  useEffect(() => {
-    setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQ]);
 
   return (
-    <main style={styles.page}>
-      <header style={styles.header}>
-        <div>
-          <div style={styles.crumbs}>
-            <Link href="/admin" style={{ textDecoration: "none" }}>
-              Admin
-            </Link>{" "}
-            /{" "}
-            <Link href="/admin/content" style={{ textDecoration: "none" }}>
-              Content
-            </Link>{" "}
-            / Projects
+    <div className="shell">
+      {/* Mobile overlay */}
+      <div className={`overlay ${mobileOpen ? "show" : ""}`} onClick={() => setMobileOpen(false)} />
+
+      <aside className={`sidebar ${mobileOpen ? "open" : ""}`} aria-label="Admin sidebar">
+        <div className="brand">
+          <div className="badge" aria-hidden="true">
+            <Shield size={18} />
+          </div>
+          <div className="brandText">
+            <div className="brandTitle">CMDI Admin</div>
+            <div className="brandSub">Secure console</div>
           </div>
 
-          <h1 style={styles.h1}>Projects</h1>
-          <p style={styles.subtitle}>Create, edit, preview, publish. This becomes your CMS backbone.</p>
+          <button className="iconBtn mobileOnly" onClick={() => setMobileOpen(false)} aria-label="Close menu">
+            <X size={18} />
+          </button>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <button type="button" onClick={() => load(page, debouncedQ)} style={styles.btn}>
-            Refresh
-          </button>
+        <div className="search">
+          <Search size={16} />
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Search modules…"
+            aria-label="Search modules"
+          />
+        </div>
 
-          <Link href="/admin/content/projects/new" style={styles.btnPrimaryLink}>
-            + New Project
+        <nav className="nav">
+          {filteredNav.map((s) => (
+            <div key={s.section} className="section">
+              <div className="sectionTitle">{s.section}</div>
+              <div className="sectionItems">
+                {s.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    active={isActive(pathname, item.href)}
+                    onClick={() => setMobileOpen(false)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="sideFooter">
+          <Link className="sideAction" href="/" target="_blank" rel="noreferrer">
+            <ExternalLink size={16} />
+            View public site
           </Link>
-        </div>
-      </header>
 
-      <section style={styles.toolbar}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by title, status, category, location…"
-          style={styles.input}
-        />
-
-        <div style={styles.small}>{countLabel}</div>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            type="button"
-            disabled={!canPrev || loading}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            style={{ ...styles.btn, ...(canPrev && !loading ? null : styles.btnDisabled) }}
-          >
-            Prev
-          </button>
-
-          <div style={styles.small}>Page {meta?.page ?? page}</div>
-
-          <button
-            type="button"
-            disabled={!canNext || loading}
-            onClick={() => setPage((p) => p + 1)}
-            style={{ ...styles.btn, ...(canNext && !loading ? null : styles.btnDisabled) }}
-          >
-            Next
+          <button className="sideAction danger" onClick={logout} type="button">
+            <LogOut size={16} />
+            Log out
           </button>
         </div>
-      </section>
+      </aside>
 
-      {err && (
-        <div style={styles.errorBox}>
-          <strong>Can’t load projects</strong>
-          <pre style={styles.pre}>{err}</pre>
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>
-            If this is an auth issue, log in at <Link href="/admin/login">/admin/login</Link>.
+      <div className="main">
+        <header className="topbar">
+          <button className="iconBtn mobileOnly" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+            <Menu size={18} />
+          </button>
+
+          <div className="crumbs" aria-label="Breadcrumb">
+            {crumbs.map((c, idx) => (
+              <span key={c.href} className="crumb">
+                {idx > 0 && <ChevronRight size={14} className="sep" />}
+                <Link href={c.href} className="crumbLink" onClick={() => setMobileOpen(false)}>
+                  {titleCase(c.label)}
+                </Link>
+              </span>
+            ))}
           </div>
-        </div>
-      )}
 
-      <section style={styles.card}>
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
-            <thead style={styles.thead}>
-              <tr>
-                <th style={styles.th}>Title</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Category</th>
-                <th style={styles.th}>Location</th>
-                <th style={styles.th}>Updated</th>
-                <th style={styles.thRight}>Actions</th>
-              </tr>
-            </thead>
+          <div className="topRight">
+            <span className="securePill" title="Admin area">
+              <Shield size={14} />
+              Secured
+            </span>
+          </div>
+        </header>
 
-            <tbody>
-              {!loading && items.length === 0 && !err && (
-                <tr>
-                  <td colSpan={6} style={{ padding: 14, opacity: 0.8 }}>
-                    No projects found.
-                  </td>
-                </tr>
-              )}
+        <main className="content">{children}</main>
+      </div>
 
-              {items.map((p) => (
-                <tr key={String(p.id)} style={styles.tr}>
-                  <td style={styles.td}>
-                    <div style={{ fontWeight: 600 }}>{p.title || "(Untitled)"}</div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>#{p.id}</div>
-                  </td>
+      <style jsx>{`
+        .shell {
+          min-height: 100vh;
+          display: grid;
+          grid-template-columns: 280px 1fr;
+          background: radial-gradient(900px 420px at 20% 0%, rgba(59, 130, 246, 0.12), transparent 65%),
+            radial-gradient(800px 420px at 90% 10%, rgba(16, 185, 129, 0.10), transparent 60%),
+            linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.92));
+        }
 
-                  <td style={{ ...styles.td, textTransform: "capitalize" }}>{p.status || "draft"}</td>
-                  <td style={styles.td}>{p.category || "—"}</td>
-                  <td style={styles.td}>{p.location || "—"}</td>
-                  <td style={styles.td}>{fmtDate(p.updated_at || p.created_at)}</td>
+        @media (max-width: 980px) {
+          .shell {
+            grid-template-columns: 1fr;
+          }
+        }
 
-                  <td style={styles.tdRight}>
-                    <div style={styles.pillRow}>
-                      <Link href={`/admin/content/projects/${p.id}/preview`} style={styles.btnLink}>
-                        Preview
-                      </Link>
-                      <Link href={`/admin/content/projects/${p.id}/edit`} style={styles.btnLink}>
-                        Edit
-                      </Link>
-                      <button type="button" onClick={() => archiveOrDelete(p.id)} style={styles.btnDanger}>
-                        Archive/Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+        .overlay {
+          display: none;
+        }
 
-              {loading && (
-                <tr>
-                  <td colSpan={6} style={{ padding: 14, opacity: 0.8 }}>
-                    Loading…
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+        @media (max-width: 980px) {
+          .overlay {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 160ms ease;
+            z-index: 40;
+          }
+          .overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+          }
+        }
+
+        .sidebar {
+          position: sticky;
+          top: 0;
+          height: 100vh;
+          padding: 14px;
+          border-right: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.80);
+          backdrop-filter: blur(12px);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          z-index: 50;
+        }
+
+        @media (max-width: 980px) {
+          .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 86vw;
+            max-width: 320px;
+            transform: translateX(-110%);
+            transition: transform 180ms ease;
+            box-shadow: 0 24px 70px rgba(2, 6, 23, 0.28);
+          }
+          .sidebar.open {
+            transform: translateX(0);
+          }
+        }
+
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 12px;
+          border-radius: 18px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        .badge {
+          width: 38px;
+          height: 38px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          color: rgb(2, 132, 199);
+          background: rgba(2, 132, 199, 0.10);
+          box-shadow: 0 0 0 5px rgba(2, 132, 199, 0.12);
+          flex: 0 0 auto;
+        }
+
+        .brandText {
+          min-width: 0;
+        }
+        .brandTitle {
+          font-weight: 900;
+          letter-spacing: -0.01em;
+          color: rgba(15, 23, 42, 0.95);
+        }
+        .brandSub {
+          font-size: 12px;
+          color: rgba(71, 85, 105, 0.95);
+          margin-top: 2px;
+        }
+
+        .search {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 16px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.92);
+          color: rgba(71, 85, 105, 0.95);
+        }
+
+        .search input {
+          border: none;
+          outline: none;
+          background: transparent;
+          width: 100%;
+          color: rgba(15, 23, 42, 0.95);
+        }
+
+        .nav {
+          padding: 6px 2px;
+          overflow: auto;
+          flex: 1 1 auto;
+        }
+
+        .section {
+          margin-top: 10px;
+        }
+
+        .sectionTitle {
+          font-size: 11px;
+          letter-spacing: 0.10em;
+          text-transform: uppercase;
+          color: rgba(100, 116, 139, 0.95);
+          padding: 8px 10px;
+        }
+
+        .sectionItems {
+          display: grid;
+          gap: 6px;
+        }
+
+        .sideFooter {
+          display: grid;
+          gap: 8px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(2, 6, 23, 0.08);
+        }
+
+        .sideAction {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          justify-content: center;
+
+          padding: 10px 12px;
+          border-radius: 16px;
+
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.92);
+          text-decoration: none;
+
+          color: rgba(15, 23, 42, 0.92);
+          font-weight: 700;
+
+          transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+        }
+
+        .sideAction:hover {
+          transform: translateY(-1px);
+          border-color: rgba(2, 6, 23, 0.14);
+          box-shadow: 0 14px 34px rgba(2, 6, 23, 0.12);
+        }
+
+        .sideAction.danger {
+          color: rgba(185, 28, 28, 0.95);
+          background: rgba(254, 242, 242, 0.95);
+          border-color: rgba(248, 113, 113, 0.25);
+          cursor: pointer;
+        }
+
+        .main {
+          min-width: 0;
+          display: grid;
+          grid-template-rows: auto 1fr;
+        }
+
+        .topbar {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+
+          padding: 14px 16px;
+          border-bottom: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.70);
+          backdrop-filter: blur(12px);
+        }
+
+        .crumbs {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          color: rgba(71, 85, 105, 0.95);
+          font-size: 13px;
+        }
+
+        .crumb {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sep {
+          opacity: 0.65;
+        }
+
+        .crumbLink {
+          color: rgba(15, 23, 42, 0.92);
+          text-decoration: none;
+          font-weight: 700;
+        }
+
+        .crumbLink:hover {
+          text-decoration: underline;
+        }
+
+        .topRight {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .securePill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.85);
+          color: rgba(15, 23, 42, 0.90);
+          font-weight: 800;
+          font-size: 12px;
+        }
+
+        .content {
+          padding: 18px 16px 30px;
+        }
+
+        .iconBtn {
+          width: 40px;
+          height: 40px;
+          border-radius: 14px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.92);
+          display: grid;
+          place-items: center;
+          cursor: pointer;
+          transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .iconBtn:hover {
+          transform: translateY(-1px);
+          border-color: rgba(2, 6, 23, 0.14);
+          box-shadow: 0 14px 34px rgba(2, 6, 23, 0.12);
+        }
+
+        .mobileOnly {
+          display: none;
+        }
+
+        @media (max-width: 980px) {
+          .mobileOnly {
+            display: grid;
+          }
+        }
+      `}</style>
+    </div>
   );
+}
+
+function NavLink({
+  item,
+  active,
+  onClick,
+}: {
+  item: NavItem;
+  active: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <>
+      <Link className={`navItem ${active ? "active" : ""}`} href={item.href} onClick={onClick} prefetch={false}>
+        <span className="navIcon">
+          <Icon size={18} />
+        </span>
+        <span className="navLabel">{item.label}</span>
+        <span className="navDot" />
+      </Link>
+
+      <style jsx>{`
+        .navItem {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          padding: 10px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+
+          color: rgba(30, 41, 59, 0.92);
+          border: 1px solid rgba(2, 6, 23, 0.06);
+          background: rgba(255, 255, 255, 0.7);
+
+          transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+        }
+
+        .navItem:hover {
+          transform: translateY(-1px);
+          border-color: rgba(2, 6, 23, 0.12);
+          box-shadow: 0 14px 34px rgba(2, 6, 23, 0.10);
+          background: rgba(255, 255, 255, 0.88);
+        }
+
+        .navItem.active {
+          background: rgba(2, 132, 199, 0.10);
+          border-color: rgba(2, 132, 199, 0.22);
+        }
+
+        .navIcon {
+          width: 34px;
+          height: 34px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          background: rgba(2, 6, 23, 0.04);
+          color: rgba(2, 132, 199, 0.95);
+        }
+
+        .navItem.active .navIcon {
+          background: rgba(2, 132, 199, 0.12);
+        }
+
+        .navLabel {
+          font-weight: 800;
+          font-size: 13px;
+          letter-spacing: -0.01em;
+          flex: 1 1 auto;
+        }
+
+        .navDot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(100, 116, 139, 0.35);
+          opacity: ${active ? 1 : 0};
+          transition: opacity 160ms ease;
+        }
+      `}</style>
+    </>
+  );
+}
+
+function isActive(pathname: string, href: string) {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+function titleCase(s: string) {
+  if (!s) return s;
+  return s
+    .split(" ")
+    .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : p))
+    .join(" ");
 }
