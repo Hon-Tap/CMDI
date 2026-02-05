@@ -1,53 +1,30 @@
 # ==============================================================================
-# CORE SECRETS & ENV
+# SECRETS & ENV
 # ==============================================================================
-
-# Env files
 .env
 .env.*
 !.env.example
-
-# Local overrides
 *.local
-
-# Private keys / certs
 *.pem
 *.key
 
-# Common secret folders/files (kept broad but not ridiculous)
+# Keep this tight (don’t ignore random code files named "passwordReset", etc)
+# Ignore only the actual file you have in repo root:
+password
+/password
+
 **/secrets/**
 **/*secret*
 
 
 # ==============================================================================
-# NODE / NEXT.JS (any folder)
+# NODE / NEXT.JS
 # ==============================================================================
-
-# Dependencies
 node_modules/
 **/node_modules/
 
-# Next.js build output
 .next/
 **/.next/
-
-# Common build outputs
-out/
-dist/
-build/
-
-
-# ==============================================================================
-# VERCEL / NETLIFY / DEPLOY
-# ==============================================================================
-
-.vercel/
-.netlify/
-
-
-# ==============================================================================
-# TURBO / CACHES
-# ==============================================================================
 
 .turbo/
 **/.turbo/
@@ -55,15 +32,20 @@ build/
 .cache/
 **/.cache/
 
-# Common tool caches
+out/
+dist/
+build/
+
+.vercel/
+.netlify/
+
 .eslintcache
 .stylelintcache
 
 
 # ==============================================================================
-# BACKEND (PHP)
+# PHP (BACKEND)
 # ==============================================================================
-
 vendor/
 **/vendor/
 composer.phar
@@ -71,9 +53,8 @@ composer.phar
 
 
 # ==============================================================================
-# LOGS & DEBUG
+# LOGS / DEBUG / COVERAGE
 # ==============================================================================
-
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -82,29 +63,21 @@ pnpm-debug.log*
 lerna-debug.log*
 *.tsbuildinfo
 
-
-# ==============================================================================
-# TESTING / COVERAGE
-# ==============================================================================
-
 coverage/
 .nyc_output/
 
 
 # ==============================================================================
-# OS & IDE JUNK
+# OS / IDE
 # ==============================================================================
-
 .DS_Store
 Thumbs.db
 desktop.ini
-
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Office temp files
 ~$*
 *.tmp
 *.temp
