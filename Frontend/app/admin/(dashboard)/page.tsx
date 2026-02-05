@@ -13,8 +13,6 @@ import {
   Plus,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-
 type CountState = {
   projects?: number;
   programs?: number;

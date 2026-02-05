@@ -20,8 +20,6 @@ import {
   Search,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-
 type NavItem = {
   label: string;
   href: string;

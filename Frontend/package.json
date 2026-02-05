@@ -2,11 +2,17 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "preinstall": "node -e \"const [maj, min]=process.versions.node.split('.').map(Number); if (maj < 20 || (maj===20 && min < 9)) { console.error('Node >= 20.9.0 is required. Current:', process.versions.node); process.exit(1); }\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
