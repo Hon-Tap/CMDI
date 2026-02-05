@@ -1,9 +1,0 @@
-node_modules/
-.next/
-.turbo/
-.cache/
-
-# Env files
-.env
-.env.*
-!.env.example
