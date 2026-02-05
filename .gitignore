@@ -1,71 +1,79 @@
 # ==============================================================================
 # CORE SECRETS & ENV
 # ==============================================================================
+
+# Env files
 .env
 .env.*
 !.env.example
+
+# Local overrides
 *.local
+
+# Private keys / certs
 *.pem
 *.key
-password*
-**/secrets*
+
+# Common secret folders/files (kept broad but not ridiculous)
+**/secrets/**
 **/*secret*
+
 
 # ==============================================================================
 # NODE / NEXT.JS (any folder)
 # ==============================================================================
+
+# Dependencies
 node_modules/
 **/node_modules/
 
+# Next.js build output
 .next/
 **/.next/
 
+# Common build outputs
 out/
 dist/
 build/
 
-# Next.js build output & caches
-.next/
-**/.next/
-Frontend/.next/
 
+# ==============================================================================
+# VERCEL / NETLIFY / DEPLOY
+# ==============================================================================
 
-# Next.js / Vercel / Netlify
 .vercel/
 .netlify/
 
-# Turbopack / Next caches
+
+# ==============================================================================
+# TURBO / CACHES
+# ==============================================================================
+
 .turbo/
 **/.turbo/
+
 .cache/
 **/.cache/
 
-# Optional: common tool caches
+# Common tool caches
 .eslintcache
 .stylelintcache
 
-# ==============================================================================
-# FRONTEND (explicit)
-# ==============================================================================
-Frontend/.next/
-Frontend/out/
-Frontend/dist/
-Frontend/build/
-Frontend/.turbo/
-Frontend/.cache/
 
 # ==============================================================================
 # BACKEND (PHP)
 # ==============================================================================
+
 vendor/
 **/vendor/
-backend/vendor/
 composer.phar
-backend/composer.phar
+.phpunit.result.cache
+
 
 # ==============================================================================
 # LOGS & DEBUG
 # ==============================================================================
+
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -74,16 +82,19 @@ pnpm-debug.log*
 lerna-debug.log*
 *.tsbuildinfo
 
+
 # ==============================================================================
 # TESTING / COVERAGE
 # ==============================================================================
+
 coverage/
 .nyc_output/
-.phpunit.result.cache
+
 
 # ==============================================================================
 # OS & IDE JUNK
 # ==============================================================================
+
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -92,33 +103,8 @@ desktop.ini
 .idea/
 *.swp
 *.swo
-# ==============================================================================
-# FORCE IGNORE (Next.js build output)
-# ==============================================================================
-/Frontend/.next/
-/Frontend/.next/**
-/.next/
-/**/.next/**
-
-node_modules/
-**/node_modules/
-.next/
-**/.next/
-
-backend/.env
-backend/vendor/
-backend/node_modules/
 
 # Office temp files
 ~$*
 *.tmp
 *.temp
-
-# Next.js build output
-.next/
-
-
-# FORCE IGNORE: Next.js build output (keep these LAST)
-.next/
-**/.next/
-
