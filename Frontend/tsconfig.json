@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    /* Next.js + TS defaults (safe + modern) */
     "target": "ES2020",
     "lib": [
       "DOM",
@@ -10,24 +9,18 @@
     ],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    /* App Router works best with these */
     "jsx": "react-jsx",
     "isolatedModules": true,
     "noEmit": true,
-    /* Interop + JSON */
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    /* Quality */
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    /* JS allowed (optional) */
     "allowJs": true,
     "checkJs": false,
-    /* Faster editor builds */
     "incremental": true,
-    /* Path alias */
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -44,8 +37,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
     "types/**/*.d.ts",
+    ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

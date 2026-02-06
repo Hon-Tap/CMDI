@@ -7,7 +7,7 @@ import styles from './projects.module.css';
 import { Droplets, BookOpen, Shield, Hammer, Loader2, AlertCircle } from 'lucide-react';
 
 /* -----------------------------
-  Types
+  Types (match DB columns)
 ----------------------------- */
 type Project = {
   id?: number | string;
@@ -17,6 +17,8 @@ type Project = {
   status?: string;
   location?: string;
   category?: string;
+  created_at?: string; // timestamptz -> string in JSON
+  updated_at?: string; // timestamptz -> string in JSON
 };
 
 type ApiResponse = { status?: string; data?: Project[] } | Project[];
@@ -49,7 +51,6 @@ const getIcon = (category?: string) => {
 };
 
 /* =========================================================
-  ✅ IMPORTANT:
   Default export wraps a child in Suspense.
   The child is the ONLY place we call useSearchParams().
 ========================================================= */
@@ -124,6 +125,7 @@ function ProjectsClient() {
 
     try {
       const res = await fetch(`${apiBase}/api/projects`, {
+        method: 'GET',
         cache: 'no-store',
         headers: { Accept: 'application/json' },
         signal,
@@ -135,7 +137,19 @@ function ProjectsClient() {
 
       const result = (await res.json()) as ApiResponse;
       const dataArray = unwrapArray(result);
-      setProjects(dataArray);
+
+      // Sort safely client-side too (in case API doesn't order)
+      const sorted = [...dataArray].sort((a, b) => {
+        const ad = a.created_at ? Date.parse(a.created_at) : 0;
+        const bd = b.created_at ? Date.parse(b.created_at) : 0;
+        if (bd !== ad) return bd - ad;
+        // fallback stable: id desc if numeric-ish
+        const ai = Number(a.id) || 0;
+        const bi = Number(b.id) || 0;
+        return bi - ai;
+      });
+
+      setProjects(sorted);
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
       console.error('Fetch Error:', err);
@@ -208,7 +222,9 @@ function ProjectsClient() {
           {loading && (
             <div style={{ textAlign: 'center', padding: '4rem 0' }}>
               <Loader2 size={44} className="animate-spin" />
-              <p style={{ marginTop: '0.9rem', color: '#64748b', fontWeight: 700 }}>Waking up server, please wait…</p>
+              <p style={{ marginTop: '0.9rem', color: '#64748b', fontWeight: 700 }}>
+                Waking up server, please wait…
+              </p>
             </div>
           )}
 
@@ -245,7 +261,11 @@ function ProjectsClient() {
                   const status = (project.status || 'Ongoing').trim();
 
                   return (
-                    <div key={project.id ?? index} className={styles.projectCard} style={{ animationDelay: `${index * 0.08}s` }}>
+                    <div
+                      key={project.id ?? index}
+                      className={styles.projectCard}
+                      style={{ animationDelay: `${index * 0.08}s` }}
+                    >
                       <div className={styles.imageWrapper}>
                         <Image
                           src={imgSrc}
@@ -265,6 +285,7 @@ function ProjectsClient() {
                         </div>
 
                         <h3 className={styles.cardTitle}>{project.title || 'Community Project'}</h3>
+
                         <p className={styles.cardDesc}>
                           {project.description || 'Community-led interventions delivering practical support.'}
                         </p>
