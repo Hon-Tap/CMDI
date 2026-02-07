@@ -1,53 +1,73 @@
-import { Pool, QueryResultRow } from "pg";
+// Frontend/lib/db.ts
+import { Pool, type QueryResultRow } from "pg";
 
 /**
- * 1. Global Type Definition
- * Prevents TypeScript errors and connection leaks during development 
- * and build discovery phases.
+ * We keep a single pg Pool instance across hot-reloads in dev.
+ * In CI / `next build`, we also ensure the pool doesn't keep the Node
+ * event-loop alive (which can make builds appear to "hang").
  */
+
 declare global {
+  // eslint-disable-next-line no-var
   var pgPool: Pool | undefined;
 }
 
-/**
- * 2. Singleton Initialization
- * Reuses the existing pool if it exists, preventing the "Too many clients" 
- * error and build-time hanging.
- */
-const pool =
-  global.pgPool ||
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl:
-      process.env.DATABASE_SSL === "true"
-        ? { rejectUnauthorized: false }
-        : undefined,
-    // 3. CRITICAL: Prevents the 40-minute build hang if the DB is unreachable
-    connectionTimeoutMillis: 5000, 
-    idleTimeoutMillis: 10000,
-  });
+/** Narrow helper: true-ish env values */
+function envTrue(v: string | undefined) {
+  return v === "true" || v === "1" || v === "yes";
+}
 
-// Save to global object in non-production environments
+/**
+ * Build a new Pool.
+ * NOTE: allowExitOnIdle prevents `next build` from hanging due to an idle pool
+ * keeping the process alive.
+ */
+function createPool() {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    // Fail fast with a clear error (better than mysterious timeouts).
+    throw new Error("DATABASE_URL is not defined in environment variables");
+  }
+
+  return new Pool({
+    connectionString,
+    ssl: envTrue(process.env.DATABASE_SSL) ? { rejectUnauthorized: false } : undefined,
+
+    // Fast failure when DB is unreachable
+    connectionTimeoutMillis: 5000,
+
+    // Keep idle clients short-lived
+    idleTimeoutMillis: 10_000,
+
+    // ✅ Critical: lets Node exit when nothing else is pending (fixes build hang)
+    allowExitOnIdle: true,
+  });
+}
+
+/**
+ * Singleton Pool:
+ * - Dev: reuse via global to avoid "Too many clients" during HMR
+ * - Prod: just one instance per runtime
+ */
+export const pool: Pool = global.pgPool ?? createPool();
+
 if (process.env.NODE_ENV !== "production") {
   global.pgPool = pool;
 }
 
 /**
- * 4. Type-Safe Query Function
- * "T extends QueryResultRow" fixes the error: 
- * "Type 'T' does not satisfy the constraint 'QueryResultRow'".
+ * Type-safe query helper.
+ * Also warns if a query is attempted during the production build phase,
+ * which often indicates accidental build-time data fetching.
  */
-export async function query<T extends QueryResultRow = any>(
-  text: string,
-  params: any[] = []
-) {
-  // Optional: Safety check to log if queries are firing during build
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
-     console.warn("⚠️ Database query attempted during build phase.");
+export async function query<T extends QueryResultRow = any>(text: string, params: any[] = []) {
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    // eslint-disable-next-line no-console
+    console.warn("⚠️ Database query attempted during build phase.");
   }
 
-  const res = await pool.query<T>(text, params);
-  return res;
+  return pool.query<T>(text, params);
 }
 
 export default pool;
