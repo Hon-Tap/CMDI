@@ -7,12 +7,10 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build --webpack",
-    "build:webpack": "next build --webpack",
+    "dev": "next dev --webpack",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "preinstall": "node -e \"const maj=process.versions.node.split('.')[0]; if (maj !== '20') { console.error('Error: Node.js 20.x is required for this project. Found:', process.versions.node); process.exit(1); }\""
+    "lint": "next lint"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

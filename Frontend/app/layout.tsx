@@ -7,6 +7,12 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+// Frontend/app/layout.tsx
+
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+
 /* -----------------------------
    Site constants
 ----------------------------- */

@@ -1,3 +1,6 @@
+
+import "server-only";
+
 import { query } from "@/lib/db";
 
 type ListOpts = {
