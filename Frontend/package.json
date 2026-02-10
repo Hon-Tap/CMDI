@@ -8,9 +8,17 @@
   },
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build",
+    "dev:turbo": "next dev --turbopack",
+
+    "build": "next build --webpack",
+    "build:turbo": "next build --turbopack",
+
     "start": "next start",
-    "lint": "next lint"
+
+    "lint": "next lint",
+
+    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true}); console.log('deleted .next')\"",
+    "build:diag": "next build --webpack 2>&1 | tee build_diag.log"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
