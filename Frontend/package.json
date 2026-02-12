@@ -7,18 +7,10 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "next dev --webpack",
-    "dev:turbo": "next dev --turbopack",
-
-    "build": "next build --webpack",
-    "build:turbo": "next build --turbopack",
-
+    "dev": "next dev",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" next build",
     "start": "next start",
-
-    "lint": "next lint",
-
-    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true}); console.log('deleted .next')\"",
-    "build:diag": "next build --webpack 2>&1 | tee build_diag.log"
+    "lint": "next lint"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -36,6 +28,7 @@
     "@types/pg": "^8.11.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "cross-env": "^7.0.3",
     "typescript": "^5.9.3"
   }
 }

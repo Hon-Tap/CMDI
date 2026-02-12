@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Http\Controllers;
@@ -6,41 +7,89 @@ namespace App\Http\Controllers;
 use PDO;
 use Exception;
 
-class ContactController {
-    private $db;
+class ContactController
+{
+    private PDO $db;
 
-    public function __construct() {
+    public function __construct()
+    {
+        $dsn = $_ENV['DATABASE_URL'] ?? null;
+
+        if ($dsn) {
+            if (str_starts_with($dsn, 'postgres://') || str_starts_with($dsn, 'postgresql://')) {
+                $parts = parse_url($dsn);
+
+                $host = $parts['host'] ?? '127.0.0.1';
+                $port = $parts['port'] ?? 5432;
+                $user = $parts['user'] ?? '';
+                $pass = $parts['pass'] ?? '';
+                $db   = isset($parts['path']) ? ltrim($parts['path'], '/') : '';
+
+                $pdoDsn = "pgsql:host={$host};port={$port};dbname={$db};";
+                $this->db = new PDO($pdoDsn, $user, $pass, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                ]);
+                return;
+            }
+
+            $this->db = new PDO($dsn, null, null, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]);
+            return;
+        }
+
         $host = $_ENV['DB_HOST'] ?? '127.0.0.1';
         $db   = $_ENV['DB_NAME'] ?? 'cmdi_db';
-        $dsn  = "pgsql:host=$host;port=5432;dbname=$db;";
-        $this->db = new PDO($dsn, $_ENV['DB_USER'], $_ENV['DB_PASS'], [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        $user = $_ENV['DB_USER'] ?? '';
+        $pass = $_ENV['DB_PASS'] ?? '';
+
+        $pdoDsn = "pgsql:host=$host;port=5432;dbname=$db;";
+        $this->db = new PDO($pdoDsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ]);
     }
 
-    public function store(): void {
+    public function store(): void
+    {
         try {
-            $json = file_get_contents('php://input');
-            $data = json_decode($json, true);
+            $raw = file_get_contents('php://input');
+            $data = json_decode($raw, true);
 
-            if ($data === null) {
-                json(['error' => 'Invalid JSON data provided.'], 400);
+            if (!is_array($data)) {
+                json(['error' => 'Invalid JSON payload'], 400);
             }
 
-            if (empty($data['full_name']) || empty($data['email']) || empty($data['message'])) {
-                json(['error' => 'Please fill in all required fields (Name, Email, Message).'], 400);
+            $fullName = trim((string)($data['full_name'] ?? ''));
+            $email    = trim((string)($data['email'] ?? ''));
+            $subject  = trim((string)($data['subject'] ?? 'General Inquiry'));
+            $message  = trim((string)($data['message'] ?? ''));
+
+            if ($fullName === '' || $email === '' || $message === '') {
+                json(['error' => 'Please fill in all required fields (full_name, email, message).'], 400);
             }
 
-            $sql = "INSERT INTO contacts (full_name, email, subject, message) VALUES (?, ?, ?, ?)";
+            $sql = "
+                INSERT INTO contacts (full_name, email, subject, message)
+                VALUES (:full_name, :email, :subject, :message)
+                RETURNING id, created_at
+            ";
+
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
-                $data['full_name'],
-                $data['email'],
-                $data['subject'] ?? 'General Inquiry',
-                $data['message']
+                ':full_name' => $fullName,
+                ':email'     => $email,
+                ':subject'   => $subject,
+                ':message'   => $message,
             ]);
 
-            json(['success' => true, 'message' => 'Your message has been sent successfully!']);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            json([
+                'success' => true,
+                'message' => 'Your message has been sent successfully!',
+                'data' => $row ?: null
+            ], 201);
+
         } catch (Exception $e) {
             json(['error' => 'Failed to send message: ' . $e->getMessage()], 500);
         }
