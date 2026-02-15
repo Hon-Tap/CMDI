@@ -11,25 +11,27 @@ class VolunteerController
 {
     /**
      * GET /api/volunteers
-     * Returns recent volunteer applications (ordered) and an optional count
+     * - Default: returns newest first in { success, data, count }
+     * - Optional: /api/volunteers?count=1 returns only { success, count }
      */
     public function index(): void
     {
         try {
-            // If your frontend just needs the count, you can later add:
-            // /api/volunteers?count=1 to return only {count: N}
-            $countOnly = isset($_GET['count']) && ($_GET['count'] === '1' || $_GET['count'] === 'true');
+            $countOnly = isset($_GET['count']) && in_array((string)$_GET['count'], ['1', 'true'], true);
 
             if ($countOnly) {
-                // If your ORM supports count() directly, use it:
+                // If your ORM supports count(), use it.
                 // $count = Volunteer::count();
-                // Otherwise fallback to counting the array.
+
                 $all = Volunteer::all();
-                json(['success' => true, 'count' => is_countable($all) ? count($all) : 0]);
+                $count = is_countable($all) ? count($all) : 0;
+
+                json(['success' => true, 'count' => $count]);
+                return;
             }
 
-            // Prefer newest first (matches UI expectation)
-            // If your ORM supports it; otherwise this still runs fine if ignored.
+            // Prefer newest first
+            // Assumes ORM supports orderBy()->get()
             $rows = Volunteer::orderBy('created_at', 'desc')->get();
 
             json([
@@ -53,13 +55,15 @@ class VolunteerController
     public function store(): void
     {
         try {
-            $raw = file_get_contents('php://input');
-            $data = json_decode((string)$raw, true);
+            $raw  = (string) file_get_contents('php://input');
+            $data = json_decode($raw, true);
 
             if (!is_array($data)) {
                 json(['success' => false, 'message' => 'Invalid JSON payload'], 400);
+                return;
             }
 
+            // Normalize inputs (DB columns are text, created_at is DB-managed)
             $firstName = trim((string)($data['first_name'] ?? ''));
             $lastName  = trim((string)($data['last_name'] ?? ''));
             $email     = strtolower(trim((string)($data['email'] ?? '')));
@@ -73,47 +77,60 @@ class VolunteerController
                     'success' => false,
                     'message' => 'Required fields missing: first_name, last_name, email, primary_skill, reason',
                 ], 400);
+                return;
             }
 
             // Basic validation
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 json(['success' => false, 'message' => 'Invalid email address'], 400);
+                return;
             }
 
-            // Guard sizes (avoid storing garbage / extremely long payloads)
+            // Guard sizes (practical limits; DB is text)
             if (mb_strlen($firstName) > 120 || mb_strlen($lastName) > 120) {
                 json(['success' => false, 'message' => 'Name is too long'], 400);
-            }
-            if (mb_strlen($email) > 190) {
-                json(['success' => false, 'message' => 'Email is too long'], 400);
-            }
-            if (mb_strlen($phone) > 60) {
-                json(['success' => false, 'message' => 'Phone is too long'], 400);
-            }
-            if (mb_strlen($skill) > 120) {
-                json(['success' => false, 'message' => 'Primary skill is too long'], 400);
-            }
-            if (mb_strlen($reason) > 2000) {
-                json(['success' => false, 'message' => 'Reason is too long (max 2000 characters)'], 400);
+                return;
             }
 
-            // Optional: prevent duplicates by email (recommended)
-            // If your ORM has where()->first():
+            if (mb_strlen($email) > 190) {
+                json(['success' => false, 'message' => 'Email is too long'], 400);
+                return;
+            }
+
+            if ($phone !== '' && mb_strlen($phone) > 60) {
+                json(['success' => false, 'message' => 'Phone is too long'], 400);
+                return;
+            }
+
+            if (mb_strlen($skill) > 120) {
+                json(['success' => false, 'message' => 'Primary skill is too long'], 400);
+                return;
+            }
+
+            // Align with your frontend (REASON_MAX = 800)
+            if (mb_strlen($reason) > 800) {
+                json(['success' => false, 'message' => 'Reason is too long (max 800 characters)'], 400);
+                return;
+            }
+
+            // Prevent duplicates by email
             $existing = Volunteer::where('email', $email)->first();
             if ($existing) {
                 json([
                     'success' => false,
                     'message' => 'A volunteer application with this email already exists.',
                 ], 409);
+                return;
             }
 
             $row = Volunteer::create([
                 'first_name'    => $firstName,
                 'last_name'     => $lastName,
                 'email'         => $email,
-                'phone'         => $phone, // empty string allowed
+                'phone'         => ($phone === '' ? null : $phone),
                 'primary_skill' => $skill,
                 'reason'        => $reason,
+                // created_at should be handled by DB default NOW() if configured
             ]);
 
             json([
