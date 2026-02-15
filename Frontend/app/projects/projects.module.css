@@ -1,35 +1,25 @@
 /* Frontend/app/projects/projects.module.css
    =========================================================
-   PROJECTS PAGE — PRO POLISH (Programs-aligned)
+   PROJECTS PAGE — UNIQUE PREMIUM DOCUMENTARY STYLE
    CSS MODULE SAFE • no :root • no * • no global selectors
-
-   - Premium hero with glow + grain + drift (Programs match)
-   - Glass segmented filter (stronger contrast + hover physics)
-   - 12-col grid cards with gradient edge glow on hover
-   - Optional state cards + link button style for consistency
    ========================================================= */
 
 /* -------------------------------------------------------------------------- */
 /* 0) PAGE TOKENS (SCOPED)                                                    */
 /* -------------------------------------------------------------------------- */
-
 .page {
-  /* Surfaces */
   --pr-bg: #f8fafc;
   --pr-surface: rgba(255, 255, 255, 0.92);
   --pr-white: #ffffff;
 
-  /* Text */
-  --pr-ink: #0f172a;
+  --pr-ink: #0b1220;
   --pr-text: #334155;
   --pr-muted: #64748b;
 
-  /* Brand */
   --pr-primary: #00aeef;
   --pr-primary-2: #0284c7;
   --pr-navy: #1e3a8a;
 
-  /* Borders + shadows */
   --pr-border: rgba(15, 23, 42, 0.10);
   --pr-border-2: rgba(15, 23, 42, 0.16);
 
@@ -43,11 +33,9 @@
   --pr-shadow-md: 0 24px 60px rgba(2, 6, 23, 0.12);
   --pr-shadow-lg: 0 40px 100px rgba(2, 6, 23, 0.18);
 
-  /* Motion */
   --pr-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --pr-spring: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Focus ring */
   --pr-ring: 0 0 0 4px rgba(0, 174, 239, 0.18);
 
   min-height: 100vh;
@@ -70,7 +58,9 @@
   .cardImg,
   .progressBarFill,
   .stateCard,
-  .linkBtn {
+  .linkBtn,
+  .heroBadge,
+  .statPill {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -80,7 +70,6 @@
 /* -------------------------------------------------------------------------- */
 /* 1) LAYOUT                                                                   */
 /* -------------------------------------------------------------------------- */
-
 .container {
   max-width: 1280px;
   margin: 0 auto;
@@ -90,7 +79,6 @@
 /* -------------------------------------------------------------------------- */
 /* 2) MICRO-ANIMATIONS                                                        */
 /* -------------------------------------------------------------------------- */
-
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
   to   { opacity: 1; transform: translateY(0);  filter: blur(0); }
@@ -112,18 +100,16 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* 3) HERO (Programs-style premium)                                            */
+/* 3) HERO (image-backed, documentary premium)                                 */
 /* -------------------------------------------------------------------------- */
-
 .hero {
   position: relative;
-  min-height: clamp(440px, 60vh, 600px);
+  min-height: clamp(460px, 62vh, 640px);
   display: grid;
   place-items: center;
   text-align: center;
 
-  /* navbar-safe top padding */
-  padding: clamp(96px, 12vh, 140px) 1.25rem clamp(4rem, 6vw, 5.1rem);
+  padding: clamp(96px, 12vh, 140px) 1.25rem clamp(4rem, 6vw, 5.3rem);
   margin-bottom: clamp(-44px, -4vw, -34px);
 
   border-bottom-left-radius: clamp(34px, 5vw, 70px);
@@ -132,12 +118,29 @@
   overflow: hidden;
   isolation: isolate;
   color: #fff;
+}
 
-  /* darker premium stack (closer to Programs hero) */
+.heroBg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.heroBgImg {
+  object-fit: cover;
+  transform: scale(1.04);
+  filter: saturate(1.06) contrast(1.05) brightness(0.70);
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   background:
-    radial-gradient(1200px 650px at 20% 20%, rgba(0, 174, 239, 0.26), transparent 60%),
-    radial-gradient(1000px 600px at 85% 30%, rgba(30, 58, 138, 0.38), transparent 60%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.92), rgba(30, 58, 138, 0.72));
+    radial-gradient(1100px 720px at 16% 24%, rgba(0, 174, 239, 0.26), transparent 62%),
+    radial-gradient(980px 620px at 86% 30%, rgba(30, 58, 138, 0.42), transparent 60%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.72), rgba(30, 58, 138, 0.62));
 }
 
 /* glow drift */
@@ -145,10 +148,10 @@
   content: "";
   position: absolute;
   inset: -28%;
-  z-index: 0;
+  z-index: 2;
 
   background:
-    radial-gradient(900px 520px at 20% 30%, rgba(0, 174, 239, 0.20), transparent 60%),
+    radial-gradient(900px 520px at 20% 30%, rgba(0, 174, 239, 0.18), transparent 60%),
     radial-gradient(900px 520px at 80% 25%, rgba(245, 158, 11, 0.12), transparent 60%);
 
   pointer-events: none;
@@ -160,8 +163,8 @@
   content: "";
   position: absolute;
   inset: -40%;
-  z-index: 0;
-  opacity: 0.06;
+  z-index: 2;
+  opacity: 0.07;
 
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
@@ -172,14 +175,44 @@
 
 .heroContent {
   position: relative;
-  z-index: 1;
-  max-width: 880px;
+  z-index: 3;
+  max-width: 920px;
   animation: fadeUp 900ms var(--pr-ease) both;
   text-shadow: 0 12px 34px rgba(2, 6, 23, 0.35);
 }
 
+.heroKicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  margin: 0 auto 0.95rem;
+  padding: 0.45rem 0.8rem;
+
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.heroKickerDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--pr-primary);
+  box-shadow: 0 0 0 6px rgba(0, 174, 239, 0.18);
+}
+
 .heroTitle {
-  font-size: clamp(2.45rem, 5.2vw, 4.15rem);
+  font-size: clamp(2.45rem, 5.2vw, 4.2rem);
   font-weight: 950;
   letter-spacing: -0.03em;
   line-height: 1.06;
@@ -196,10 +229,74 @@
   text-wrap: pretty;
 }
 
+.heroBadges {
+  margin-top: 1.25rem;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  color: rgba(255, 255, 255, 0.94);
+  font-weight: 900;
+  font-size: 0.92rem;
+
+  transition: transform 260ms var(--pr-spring), background 260ms var(--pr-ease);
+}
+
+.heroBadge:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.statsRow {
+  margin-top: 1.2rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.statPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+
+  background: rgba(2, 6, 23, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  color: rgba(255, 255, 255, 0.94);
+  font-weight: 900;
+}
+
+.statPill b {
+  font-weight: 950;
+  color: #fff;
+}
+
 /* -------------------------------------------------------------------------- */
 /* 4) FILTER BAR (glass segmented)                                             */
 /* -------------------------------------------------------------------------- */
-
 .filterSection {
   position: relative;
   z-index: 10;
@@ -231,7 +328,7 @@
   border: 1px solid transparent;
   background: transparent;
 
-  padding: 0.78rem 1.35rem;
+  padding: 0.78rem 1.15rem;
   border-radius: 999px;
 
   font-size: 0.95rem;
@@ -242,12 +339,23 @@
   cursor: pointer;
   white-space: nowrap;
 
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
   transition:
     background 220ms var(--pr-ease),
     color 220ms var(--pr-ease),
     transform 220ms var(--pr-ease),
     box-shadow 220ms var(--pr-ease),
     border-color 220ms var(--pr-ease);
+}
+
+.filterBtnIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
 }
 
 .filterBtn:hover {
@@ -269,10 +377,13 @@
   box-shadow: 0 14px 35px rgba(0, 174, 239, 0.18);
 }
 
+.filterBtnActive .filterBtnIcon {
+  opacity: 1;
+}
+
 /* -------------------------------------------------------------------------- */
 /* 5) GRID                                                                     */
 /* -------------------------------------------------------------------------- */
-
 .projectGrid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -281,9 +392,8 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* 6) CARDS (Programs hover language)                                          */
+/* 6) CARDS (premium hover language)                                           */
 /* -------------------------------------------------------------------------- */
-
 .projectCard {
   grid-column: span 4;
   position: relative;
@@ -302,8 +412,8 @@
     transform 420ms var(--pr-spring),
     box-shadow 420ms var(--pr-ease),
     border-color 420ms var(--pr-ease);
-  will-change: transform;
 
+  will-change: transform;
   animation: fadeUp 650ms var(--pr-ease) both;
 }
 
@@ -320,7 +430,7 @@
   pointer-events: none;
 }
 
-/* blurred gradient edge like Programs cards */
+/* blurred gradient edge */
 .projectCard::after {
   content: "";
   position: absolute;
@@ -354,7 +464,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 45%, rgba(2, 6, 23, 0.22) 100%);
+  background: linear-gradient(180deg, transparent 45%, rgba(2, 6, 23, 0.24) 100%);
   pointer-events: none;
 }
 
@@ -373,10 +483,14 @@
   top: 1rem;
   right: 1rem;
 
-  padding: 0.45rem 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  padding: 0.45rem 0.85rem;
   border-radius: 999px;
 
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(15, 23, 42, 0.10);
 
   backdrop-filter: blur(10px);
@@ -384,7 +498,7 @@
 
   box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
 
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 950;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -392,8 +506,18 @@
   color: var(--pr-navy);
 }
 
+.statusBadgeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statusBadgeText {
+  line-height: 1;
+}
+
 .cardContent {
-  padding: 1.55rem 1.55rem 1.45rem;
+  padding: 1.55rem 1.55rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -420,6 +544,10 @@
   color: var(--pr-primary-2);
 }
 
+.cardIcon {
+  color: rgba(148, 163, 184, 0.95);
+}
+
 .cardTitle {
   margin: 0.15rem 0 0.3rem;
   font-size: 1.28rem;
@@ -431,7 +559,7 @@
 }
 
 .cardDesc {
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.6rem;
   color: var(--pr-muted);
   line-height: 1.7;
   font-size: 0.98rem;
@@ -440,6 +568,27 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.timelineRow {
+  margin-top: -0.15rem;
+  margin-bottom: 0.25rem;
+}
+
+.timelineItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  padding: 0.55rem 0.75rem;
+  border-radius: 999px;
+
+  background: rgba(2, 6, 23, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+
+  color: var(--pr-text);
+  font-weight: 900;
+  font-size: 0.86rem;
 }
 
 /* Progress */
@@ -479,9 +628,8 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* 7) OPTIONAL STATE CARDS (for consistent loading/error/empty)                */
+/* 7) STATE CARDS (loading/error/empty)                                        */
 /* -------------------------------------------------------------------------- */
-
 .stateCard {
   text-align: center;
   padding: clamp(2.5rem, 5vw, 4rem) 1rem;
@@ -533,10 +681,13 @@
   border-radius: 10px;
 }
 
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
 /* -------------------------------------------------------------------------- */
 /* 8) SKELETONS                                                                */
 /* -------------------------------------------------------------------------- */
-
 .skeletonCard {
   grid-column: span 4;
   border-radius: var(--pr-r-xl);
@@ -573,7 +724,6 @@
 /* -------------------------------------------------------------------------- */
 /* 9) RESPONSIVE                                                               */
 /* -------------------------------------------------------------------------- */
-
 @media (max-width: 1024px) {
   .projectCard { grid-column: span 6; }
   .skeletonCard { grid-column: span 6; }

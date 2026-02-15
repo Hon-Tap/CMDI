@@ -7,23 +7,44 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-// Frontend/app/layout.tsx
-
+/**
+ * Rendering behavior
+ * (You had these already; keep if you intentionally want no caching)
+ */
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-
 
 /* -----------------------------
    Site constants
 ----------------------------- */
 
 const SITE_NAME = "CMDI";
-const SITE_URL = "https://www.cmdi-ss.org"; // ✅ canonical host should be www
-const DEFAULT_TITLE = "CMDI | Empowering Children & Communities";
+const SITE_URL = "https://www.cmdi-ss.org"; // canonical host
+
+// ✅ You requested this change
+const TAGLINE = "SUPPORTING CHILDREN";
+
+const DEFAULT_TITLE = `${SITE_NAME} | ${TAGLINE}`;
+
 const DESCRIPTION =
   "Children’s Mission for Development Initiative (CMDI) is a child-focused NGO in South Sudan promoting education, protection, health, WASH, and community resilience.";
 
-const OG_IMAGE = "/images/branding/CMDI_Logo.jpeg";
+/**
+ * Your logo exists here (from your screenshot):
+ * Frontend/public/images/branding/CMDI_Logo.jpeg
+ * We'll use it for OG/Twitter previews.
+ */
+const BRAND_LOGO = "/images/branding/CMDI_Logo.jpeg";
+
+/**
+ * Favicons are separate files. Put these in Frontend/public/:
+ *  - favicon.ico
+ *  - icon.png (512x512)
+ *  - apple-touch-icon.png (180x180)
+ */
+const FAVICON_ICO = "/favicon.ico";
+const ICON_PNG = "/icon.png";
+const APPLE_TOUCH = "/apple-touch-icon.png";
 
 /* -----------------------------
    Metadata (SEO)
@@ -33,10 +54,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
 
   applicationName: SITE_NAME,
+
   title: {
     default: DEFAULT_TITLE,
     template: `%s | ${SITE_NAME}`,
   },
+
   description: DESCRIPTION,
 
   alternates: {
@@ -46,7 +69,6 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    // helps Google show big image preview in SERP
     googleBot: {
       index: true,
       follow: true,
@@ -65,10 +87,10 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: OG_IMAGE,
+        url: BRAND_LOGO,
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} — Empowering Children & Communities`,
+        alt: `${SITE_NAME} — ${TAGLINE}`,
       },
     ],
   },
@@ -77,25 +99,21 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: DEFAULT_TITLE,
     description: DESCRIPTION,
-    images: [OG_IMAGE],
+    images: [BRAND_LOGO],
   },
 
+  /**
+   * Browser tab / address-bar icon
+   * (These files MUST exist in /public)
+   */
   icons: {
-    icon: [{ url: "/favicon.ico" }],
-    shortcut: [{ url: "/favicon.ico" }],
-    apple: [{ url: "/apple-touch-icon.png" }],
+    icon: [
+      { url: FAVICON_ICO },
+      { url: ICON_PNG, type: "image/png" },
+    ],
+    shortcut: [{ url: FAVICON_ICO }],
+    apple: [{ url: APPLE_TOUCH }],
   },
-
-  // Add once you have these. Safe to keep commented until ready.
-  // verification: {
-  //   google: "GOOGLE_SEARCH_CONSOLE_TOKEN",
-  //   other: {
-  //     "msvalidate.01": "BING_TOKEN",
-  //   },
-  // },
-
-  // Optional: if you have a public contact email later
-  // authors: [{ name: SITE_NAME, url: SITE_URL }],
 };
 
 /* -----------------------------
@@ -117,7 +135,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="appBody">
-        {/* Accessible skip link */}
         <a href="#main" className="skipLink">
           Skip to content
         </a>
