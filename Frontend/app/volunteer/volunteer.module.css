@@ -1,9 +1,9 @@
 /* app/volunteer/volunteer.module.css
    =========================================================
-   VOLUNTEER PAGE — PRO POLISH (matches Home/Nav language)
-   - CSS Module safe (no :root, no global selectors)
-   - Keeps your existing class names + adds the ones used by the new TSX
-   - Premium hero, cards, roles list, form split, and status notices
+   VOLUNTEER PAGE — MODERN + INTERACTIVE
+   - CSS Module safe (no global selectors)
+   - Premium hero + cards + roles + split form
+   - Adds: fieldControl, fieldError, helperRow, charCount, errorText, required, smallDeployNote
    ========================================================= */
 
 .page {
@@ -36,6 +36,7 @@
   --v-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 
   --v-ring: 0 0 0 4px rgba(0, 174, 239, 0.18);
+  --v-ring-error: 0 0 0 4px rgba(239, 68, 68, 0.14);
 
   min-height: 100vh;
   background:
@@ -74,7 +75,6 @@
   animation: spin 0.85s linear infinite;
 }
 
-/* Reduced motion (local selectors only) */
 @media (prefers-reduced-motion: reduce) {
   .animate,
   .benefitCard,
@@ -97,19 +97,19 @@
   text-align: center;
   color: #fff;
 
-  /* Use a volunteer/field photo later if you want. Keeping your current image. */
+  /* If you later add a real volunteer image, replace this path. */
+  background-color: #0b1220;
   background-image: url('/images/branding/CMDI_Logo.jpeg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 
-  padding-top: 92px; /* room for navbar */
+  padding-top: 92px;
   padding-bottom: 64px;
   overflow: hidden;
   isolation: isolate;
 }
 
-/* main overlay */
 .heroOverlay {
   position: absolute;
   inset: 0;
@@ -120,7 +120,6 @@
     linear-gradient(to bottom, rgba(2, 6, 23, 0.78), rgba(30, 58, 138, 0.62));
 }
 
-/* subtle noise */
 .hero::after {
   content: "";
   position: absolute;
@@ -165,9 +164,7 @@
   text-wrap: balance;
 }
 
-.heroHighlight {
-  color: var(--v-primary);
-}
+.heroHighlight { color: var(--v-primary); }
 
 .heroLead {
   font-size: 1.15rem;
@@ -179,7 +176,6 @@
   text-wrap: pretty;
 }
 
-/* hero stats */
 .heroStats {
   margin-top: 2.25rem;
   display: grid;
@@ -244,11 +240,8 @@
   color: rgba(255, 255, 255, 0.92);
 }
 
-.statFallback {
-  opacity: 0.8;
-}
+.statFallback { opacity: 0.8; }
 
-/* iOS fixed background jank */
 @supports (-webkit-touch-callout: none) {
   .hero { background-attachment: scroll; }
 }
@@ -304,7 +297,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(1rem, 2vw, 1.6rem);
-  margin-top: -72px; /* keeps the “float into hero” feel */
+  margin-top: -72px;
   position: relative;
   z-index: 5;
 }
@@ -390,6 +383,9 @@
 }
 
 .roleCard {
+  width: 100%;
+  text-align: left;
+
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(148, 163, 184, 0.22);
@@ -407,6 +403,8 @@
     box-shadow 260ms var(--v-ease-out),
     border-color 260ms var(--v-ease-out),
     background 260ms var(--v-ease-out);
+
+  cursor: pointer;
 }
 
 .roleCard:hover {
@@ -414,6 +412,11 @@
   border-color: rgba(0, 174, 239, 0.28);
   box-shadow: 0 22px 55px rgba(0, 174, 239, 0.14);
   background: #ffffff;
+}
+
+.roleCard:focus-visible {
+  outline: none;
+  box-shadow: var(--v-ring), 0 22px 55px rgba(0, 174, 239, 0.14);
 }
 
 .roleLeft {
@@ -469,9 +472,7 @@
   letter-spacing: 0.10em;
 }
 
-.roleChevron {
-  opacity: 0.55;
-}
+.roleChevron { opacity: 0.55; }
 
 /* -------------------------------------------------------------------------- */
 /* FORM SECTION                                                                */
@@ -506,9 +507,7 @@
   align-items: start;
 }
 
-.formIntro {
-  max-width: 560px;
-}
+.formIntro { max-width: 560px; }
 
 .formTitle {
   margin: 0.8rem 0 0.95rem;
@@ -629,9 +628,14 @@
   margin-left: 0.35rem;
 }
 
-.volunteerForm input,
-.volunteerForm textarea,
-.volunteerForm select {
+/* New: small required marker */
+.required {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+/* Controls */
+.fieldControl {
   width: 100%;
   padding: 1rem 1.05rem;
   border-radius: 16px;
@@ -647,24 +651,57 @@
     transform 220ms var(--v-ease-out);
 }
 
-.volunteerForm textarea {
+.volunteerForm textarea.fieldControl {
   resize: vertical;
   min-height: 140px;
 }
 
-.volunteerForm input:focus,
-.volunteerForm textarea:focus,
-.volunteerForm select:focus {
+.fieldControl:focus {
   outline: none;
   border-color: rgba(0, 174, 239, 0.60);
   background: #ffffff;
   box-shadow: var(--v-ring);
 }
 
+/* Error styling */
+.fieldError {
+  border-color: rgba(239, 68, 68, 0.55) !important;
+}
+
+.fieldError:focus {
+  box-shadow: var(--v-ring-error) !important;
+}
+
+/* Rows */
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+/* Helper row under textarea */
+.helperRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0 0.35rem;
+  margin-top: 0.1rem;
+}
+
+.charCount {
+  font-size: 0.85rem;
+  color: rgba(100, 116, 139, 0.82);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.errorText {
+  margin: 0.2rem 0 0;
+  color: #ef4444;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 /* primary button */
@@ -702,9 +739,7 @@
   filter: saturate(1.05);
 }
 
-.btnPrimary:active {
-  transform: translateY(0);
-}
+.btnPrimary:active { transform: translateY(0); }
 
 .btnPrimary:focus-visible {
   outline: none;
@@ -727,6 +762,13 @@
   color: rgba(100, 116, 139, 0.85);
   font-size: 0.9rem;
   text-align: center;
+}
+
+.smallDeployNote {
+  margin: 0.85rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(100, 116, 139, 0.80);
 }
 
 /* -------------------------------------------------------------------------- */

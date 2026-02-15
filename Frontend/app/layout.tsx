@@ -21,8 +21,7 @@ export const fetchCache = "force-no-store";
 const SITE_NAME = "CMDI";
 const SITE_URL = "https://www.cmdi-ss.org"; // canonical host
 
-// ✅ You requested this change
-const TAGLINE = "SUPPORTING CHILDREN";
+const TAGLINE = "Supporting Children";
 
 const DEFAULT_TITLE = `${SITE_NAME} | ${TAGLINE}`;
 
