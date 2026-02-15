@@ -350,10 +350,6 @@ export default function PartnerWithUsPage() {
                     <button className={styles.submitBtn} type="submit" disabled={status.loading}>
                       {status.loading ? 'Submitting...' : 'Send Request'} <Send size={18} />
                     </button>
-
-                    <p className={styles.smallNote}>
-                      Tip: For deployment, set <strong>NEXT_PUBLIC_API_BASE_URL</strong> to your backend domain.
-                    </p>
                   </form>
                 </>
               )}
