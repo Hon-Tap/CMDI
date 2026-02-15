@@ -7,13 +7,16 @@ import {
   Globe,
   Users,
   Briefcase,
-  ChevronRight,
+  ArrowRight,
   Send,
   CheckCircle2,
   AlertCircle,
   Loader2,
+  MapPin,
+  Sparkles,
 } from 'lucide-react';
 
+/* --- TYPES --- */
 type VolunteerForm = {
   first_name: string;
   last_name: string;
@@ -23,30 +26,31 @@ type VolunteerForm = {
   reason: string;
 };
 
-type StatusType = '' | 'loading' | 'success' | 'error';
-type Status = { type: StatusType; message: string };
+type Status = {
+  loading: boolean;
+  message: string;
+  type: '' | 'success' | 'error';
+};
 
 type ApiListResponse<T> = T[] | { data?: T[]; count?: number; total?: number };
-
 type FieldErrors = Partial<Record<keyof VolunteerForm, string>>;
 
 const REASON_MAX = 800;
 
+/* --- UTILS --- */
 function parseCount(json: ApiListResponse<any>): number | null {
   if (Array.isArray(json)) return json.length;
-  if (typeof json?.count === 'number') return json.count;
-  if (typeof json?.total === 'number') return json.total;
+  if (typeof (json as any)?.count === 'number') return (json as any).count;
+  if (typeof (json as any)?.total === 'number') return (json as any).total;
   if (Array.isArray((json as any)?.data)) return (json as any).data.length;
   return null;
 }
 
 function isValidEmail(email: string) {
-  // good-enough browser-safe check
   return /^\S+@\S+\.\S+$/.test(email);
 }
 
 function isValidPhone(phone: string) {
-  // allow +, spaces, (), -, digits. Keep it permissive.
   return /^[0-9+().\s-]{6,}$/.test(phone);
 }
 
@@ -61,21 +65,20 @@ function validate(v: VolunteerForm): FieldErrors {
   else if (!isValidEmail(email)) e.email = 'Enter a valid email address.';
 
   const phone = v.phone.trim();
-  if (phone && !isValidPhone(phone)) e.phone = 'Enter a valid phone number (or leave it empty).';
+  if (phone && !isValidPhone(phone)) e.phone = 'Enter a valid phone number.';
 
   if (!v.primary_skill.trim()) e.primary_skill = 'Primary skill is required.';
 
   const reason = v.reason.trim();
   if (!reason) e.reason = 'Please tell us why you want to volunteer.';
-  else if (reason.length < 10) e.reason = 'Give a bit more detail (at least 10 characters).';
+  else if (reason.length < 10) e.reason = 'Please give a bit more detail.';
   else if (reason.length > REASON_MAX) e.reason = `Please keep it under ${REASON_MAX} characters.`;
 
   return e;
 }
 
 export default function VolunteerPage() {
-  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
-
+  /* --- DATA --- */
   const skills = useMemo(
     () => [
       'Healthcare / Medical',
@@ -91,14 +94,34 @@ export default function VolunteerPage() {
 
   const openRoles = useMemo(
     () => [
-      { title: 'Field Support Volunteer', location: 'Fangak County', type: 'On-site', suggestedSkill: 'Logistics / Engineering' },
-      { title: 'Grant Writing Assistant', location: 'Remote', type: 'Virtual', suggestedSkill: 'Administration / Operations' },
-      { title: 'Community Health Educator', location: 'Juba / Upper Nile', type: 'On-site', suggestedSkill: 'Healthcare / Medical' },
+      {
+        title: 'Field Support Volunteer',
+        location: 'Fangak County',
+        type: 'On-site',
+        suggestedSkill: 'Logistics / Engineering',
+      },
+      {
+        title: 'Grant Writing Assistant',
+        location: 'Remote',
+        type: 'Virtual',
+        suggestedSkill: 'Administration / Operations',
+      },
+      {
+        title: 'Community Health Educator',
+        location: 'Juba / Upper Nile',
+        type: 'On-site',
+        suggestedSkill: 'Healthcare / Medical',
+      },
     ],
     []
   );
 
-  // Form matches DB columns exactly
+  const volunteersEndpoint = useMemo(() => {
+    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://cmdi-backend.onrender.com').replace(/\/$/, '');
+    return `${base}/api/volunteers`;
+  }, []);
+
+  /* --- STATE --- */
   const [formData, setFormData] = useState<VolunteerForm>({
     first_name: '',
     last_name: '',
@@ -109,77 +132,63 @@ export default function VolunteerPage() {
   });
 
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [status, setStatus] = useState<Status>({ type: '', message: '' });
-
+  const [status, setStatus] = useState<Status>({ loading: false, message: '', type: '' });
   const [volunteerCount, setVolunteerCount] = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(true);
 
   const noticeRef = useRef<HTMLDivElement | null>(null);
 
+  /* --- ACTIONS --- */
+  const scrollToNotice = () => {
+    requestAnimationFrame(() => {
+      noticeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
+
   const setField = <K extends keyof VolunteerForm>(key: K, value: VolunteerForm[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
-    // Clear error as the user fixes it
     setErrors((prev) => {
       if (!prev[key]) return prev;
       const next = { ...prev };
       delete next[key];
       return next;
     });
+    if (status.message) setStatus((s) => ({ ...s, message: '', type: '' }));
   };
 
-  async function apiFetch(path: string, init?: RequestInit, timeoutMs = 15000) {
-    const controller = new AbortController();
-    const t = window.setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const res = await fetch(`${API_BASE}${path}`, {
-        ...init,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(init?.headers || {}),
-        },
-      });
-      return res;
-    } finally {
-      window.clearTimeout(t);
+  const applyRole = (suggestedSkill: string, title: string) => {
+    setField('primary_skill', (suggestedSkill || 'Other') as any);
+    if (!formData.reason.trim()) {
+      setField('reason', `I am interested in the ${title} role. I can contribute by...`);
     }
-  }
+    document.getElementById('application-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  // Count: GET /api/volunteers (supports array or {count}/{total}/{data})
+  // Fetch Count
   useEffect(() => {
     let mounted = true;
-
     (async () => {
       setCountLoading(true);
       try {
-        const res = await apiFetch('/api/volunteers', { method: 'GET', cache: 'no-store' as any }, 12000);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json: ApiListResponse<any> = await res.json();
-        const count = parseCount(json);
-        if (mounted) setVolunteerCount(count ?? 0);
+        const res = await fetch(volunteersEndpoint, { cache: 'no-store' });
+        if (res.ok) {
+          const json: ApiListResponse<any> = await res.json();
+          const count = parseCount(json);
+          if (mounted) setVolunteerCount(count ?? 0);
+        }
       } catch {
         if (mounted) setVolunteerCount(null);
       } finally {
         if (mounted) setCountLoading(false);
       }
     })();
+    return () => { mounted = false; };
+  }, [volunteersEndpoint]);
 
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [API_BASE]);
-
-  const scrollToNotice = () => {
-    // Smooth scroll the user to feedback area
-    requestAnimationFrame(() => {
-      noticeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  };
-
+  // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (status.loading) return;
 
     const payload: VolunteerForm = {
       first_name: formData.first_name.trim(),
@@ -193,139 +202,94 @@ export default function VolunteerPage() {
     const vErrors = validate(payload);
     if (Object.keys(vErrors).length) {
       setErrors(vErrors);
-      setStatus({ type: 'error', message: 'Please fix the highlighted fields and try again.' });
+      setStatus({ loading: false, type: 'error', message: 'Please review the errors below.' });
       scrollToNotice();
       return;
     }
 
-    setStatus({ type: 'loading', message: 'Sending application…' });
+    setStatus({ loading: true, type: '', message: 'Submitting application...' });
 
     try {
-      const res = await apiFetch('/api/volunteers', {
+      const res = await fetch(volunteersEndpoint, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      const result = await res.json().catch(() => ({} as any));
+      const result = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        const msg = result?.error || result?.message || `Request failed (HTTP ${res.status})`;
-        throw new Error(msg);
-      }
+      if (!res.ok) throw new Error(result?.message || 'Request failed');
 
-      // Accept common success shapes
-      const ok =
-        result?.success === true ||
-        result?.status === 'success' ||
-        result?.ok === true ||
-        result?.data != null;
+      const ok = result?.success === true || result?.status === 'success' || result?.data != null || result?.id != null;
+      if (!ok) throw new Error(result?.message || 'Submission failed.');
 
-      if (!ok) {
-        throw new Error(result?.message || 'Submission failed. Please try again.');
-      }
-
-      setStatus({ type: 'success', message: 'Application submitted successfully. Thank you!' });
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        primary_skill: 'Healthcare / Medical',
-        reason: '',
-      });
+      setStatus({ loading: false, type: 'success', message: 'Application received. We will be in touch soon!' });
+      setFormData({ first_name: '', last_name: '', email: '', phone: '', primary_skill: 'Healthcare / Medical', reason: '' });
       setErrors({});
       scrollToNotice();
-
-      // Optimistic count bump (fast UX)
       setVolunteerCount((c) => (typeof c === 'number' ? c + 1 : c));
 
-      // Best-effort refresh count (authoritative)
-      try {
-        const cRes = await apiFetch('/api/volunteers', { method: 'GET', cache: 'no-store' as any }, 12000);
-        if (cRes.ok) {
-          const json: ApiListResponse<any> = await cRes.json();
-          const count = parseCount(json);
-          if (typeof count === 'number') setVolunteerCount(count);
-        }
-      } catch {
-        // ignore
-      }
     } catch (err: any) {
-      const msg =
-        err?.name === 'AbortError'
-          ? 'Request timed out. Please try again.'
-          : err?.message || 'Could not connect to the server.';
-      setStatus({ type: 'error', message: msg });
+      setStatus({ loading: false, type: 'error', message: err?.message || 'Something went wrong. Please try again.' });
       scrollToNotice();
     }
   };
 
-  const applyRole = (suggestedSkill: string, title: string) => {
-    setField('primary_skill', (suggestedSkill || 'Other') as any);
-    if (!formData.reason.trim()) {
-      setField('reason', `I would like to volunteer as a ${title}. I can contribute with...`);
-    }
-    setStatus({ type: '', message: '' });
-  };
-
-  const fieldClass = (k: keyof VolunteerForm) =>
-    errors[k] ? `${styles.fieldControl} ${styles.fieldError}` : styles.fieldControl;
+  /* --- RENDER HELPERS --- */
+  const getInputClass = (k: keyof VolunteerForm) =>
+    `${styles.input} ${errors[k] ? styles.inputError : ''} ${formData[k] ? styles.inputFilled : ''}`;
 
   return (
-    <main className={styles.page}>
-      {/* HERO */}
-      <section className={styles.hero}>
-        <div className={styles.heroOverlay} aria-hidden="true" />
+    <main className={styles.pageWrapper}>
+      
+      {/* --- HERO SECTION --- */}
+      <section className={styles.heroSection}>
+        <div className={styles.heroBackground} aria-hidden="true" />
         <div className={styles.container}>
-          <div className={`${styles.heroContent} ${styles.animate}`}>
-            <span className={styles.eyebrow}>Volunteer</span>
-
+          <div className={styles.heroContent}>
+            <div className={styles.badge}>
+              <Sparkles size={14} className={styles.badgeIcon} />
+              <span>Join the Mission</span>
+            </div>
+            
             <h1 className={styles.heroTitle}>
-              Ready to help <span className={styles.heroHighlight}>build communities</span>?
+              Build Communities,<br />
+              <span className={styles.textGradient}>Change Lives.</span>
             </h1>
-
-            <p className={styles.heroLead}>
-              We’re looking for practical, kind, and consistent people to support communities in South Sudan — in the field or remotely.
+            
+            <p className={styles.heroSubtitle}>
+              We are looking for practical, kind, and consistent people to support communities in South Sudan—whether in the field or remotely.
             </p>
 
-            <div className={styles.heroStats}>
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>
-                  <Users size={18} />
-                </div>
-                <div>
-                  <p className={styles.statLabel}>Volunteer Applications</p>
-                  <div className={styles.statValue}>
-                    {countLoading ? (
-                      <span className={styles.statLoading}>
-                        <Loader2 size={18} className={styles.spin} /> Loading…
-                      </span>
-                    ) : volunteerCount === null ? (
-                      <span className={styles.statFallback}>—</span>
-                    ) : (
-                      <span>{volunteerCount.toLocaleString()}</span>
-                    )}
-                  </div>
+            {/* Glassmorphism Stats Bar */}
+            <div className={styles.statsBar}>
+              <div className={styles.statItem}>
+                <div className={styles.statIconWrapper}><Users size={20} /></div>
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>
+                    {countLoading ? <Loader2 size={14} className={styles.spin} /> : (volunteerCount?.toLocaleString() ?? '—')}
+                  </span>
+                  <span className={styles.statLabel}>Volunteers Joined</span>
                 </div>
               </div>
 
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>
-                  <Globe size={18} />
-                </div>
-                <div>
-                  <p className={styles.statLabel}>Focus Area</p>
-                  <p className={styles.statValueSmall}>Fangak County &amp; Upper Nile</p>
+              <div className={styles.statDivider} />
+
+              <div className={styles.statItem}>
+                <div className={styles.statIconWrapper}><MapPin size={20} /></div>
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>Fangak & Upper Nile</span>
+                  <span className={styles.statLabel}>Primary Focus Areas</span>
                 </div>
               </div>
 
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>
-                  <Heart size={18} />
-                </div>
-                <div>
-                  <p className={styles.statLabel}>What we need</p>
-                  <p className={styles.statValueSmall}>Skills + commitment</p>
+              <div className={styles.statDivider} />
+
+              <div className={styles.statItem}>
+                <div className={styles.statIconWrapper}><Heart size={20} /></div>
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>Urgent Needs</span>
+                  <span className={styles.statLabel}>Medical & Logistics</span>
                 </div>
               </div>
             </div>
@@ -333,82 +297,61 @@ export default function VolunteerPage() {
         </div>
       </section>
 
-      {/* BENEFITS */}
-      <section className={styles.section}>
+      {/* --- BENEFITS GRID --- */}
+      <section className={styles.benefitsSection}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>Why Volunteer</span>
-            <h2 className={styles.sectionTitle}>Do meaningful work with real people</h2>
-            <p className={styles.sectionLead}>
-              You’ll learn, contribute, and be part of a trusted team that shows up consistently.
-            </p>
+            <h2 className={styles.sectionHeading}>Why volunteer with CMDI?</h2>
+            <p className={styles.sectionSubheading}>You’ll work with a trusted team that shows up consistently.</p>
           </div>
 
-          <div className={styles.benefitsGrid}>
-            <div className={`${styles.benefitCard} ${styles.animate}`} style={{ animationDelay: '0.08s' }}>
-              <div className={styles.iconCircle}>
-                <Globe size={26} />
-              </div>
-              <h4 className={styles.benefitTitle}>Global Experience</h4>
-              <p className={styles.benefitText}>
-                Get hands-on exposure to humanitarian work — logistics, coordination, and delivery.
-              </p>
+          <div className={styles.bentoGrid}>
+            <div className={styles.bentoCard}>
+              <div className={styles.cardIcon}><Globe size={28} /></div>
+              <h3 className={styles.cardTitle}>Global Experience</h3>
+              <p className={styles.cardText}>Gain hands-on exposure to humanitarian work, logistics coordination, and field delivery in complex environments.</p>
             </div>
 
-            <div className={`${styles.benefitCard} ${styles.animate}`} style={{ animationDelay: '0.16s' }}>
-              <div className={styles.iconCircle}>
-                <Users size={26} />
-              </div>
-              <h4 className={styles.benefitTitle}>Community Roots</h4>
-              <p className={styles.benefitText}>
-                Work alongside local leaders and families across the Upper Nile region.
-              </p>
+            <div className={styles.bentoCard}>
+              <div className={styles.cardIcon}><Users size={28} /></div>
+              <h3 className={styles.cardTitle}>Community Roots</h3>
+              <p className={styles.cardText}>Work alongside local leaders and families. Our approach is community-led, meaning you listen first and act second.</p>
             </div>
 
-            <div className={`${styles.benefitCard} ${styles.animate}`} style={{ animationDelay: '0.24s' }}>
-              <div className={styles.iconCircle}>
-                <Heart size={26} />
-              </div>
-              <h4 className={styles.benefitTitle}>Lasting Impact</h4>
-              <p className={styles.benefitText}>
-                See the results clearly — children learning, families accessing clean water, safer communities.
-              </p>
+            <div className={styles.bentoCard}>
+              <div className={styles.cardIcon}><Heart size={28} /></div>
+              <h3 className={styles.cardTitle}>Tangible Impact</h3>
+              <p className={styles.cardText}>See the results clearly—children learning, families accessing clean water, and safer communities.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* OPEN ROLES */}
+      {/* --- OPEN ROLES --- */}
       <section className={styles.rolesSection}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>Opportunities</span>
-            <h2 className={styles.sectionTitle}>Current openings</h2>
-            <p className={styles.sectionLead}>Apply to a role — or send a general application using the form below.</p>
+            <h2 className={styles.sectionHeading}>Current Openings</h2>
+            <p className={styles.sectionSubheading}>Select a role to fast-track your application.</p>
           </div>
 
-          <div className={styles.rolesList}>
+          <div className={styles.rolesGrid}>
             {openRoles.map((role, idx) => (
               <button
-                key={`${role.title}-${idx}`}
+                key={idx}
                 type="button"
                 className={styles.roleCard}
                 onClick={() => applyRole(role.suggestedSkill, role.title)}
-                aria-label={`Apply for ${role.title}`}
               >
-                <div className={styles.roleLeft}>
-                  <div className={styles.roleIcon}>
-                    <Briefcase size={18} />
-                  </div>
-                  <div>
-                    <h5 className={styles.roleTitle}>{role.title}</h5>
-                    <p className={styles.roleMeta}>{role.location}</p>
-                  </div>
+                <div className={styles.roleHeader}>
+                  <Briefcase size={20} className={styles.roleIcon} />
+                  <span className={styles.roleTypeBadge}>{role.type}</span>
                 </div>
-
-                <div className={styles.roleRight}>
-                  <span className={styles.roleTag}>{role.type}</span>
-                  <ChevronRight size={18} className={styles.roleChevron} />
+                <h4 className={styles.roleTitle}>{role.title}</h4>
+                <p className={styles.roleLocation}>{role.location}</p>
+                <div className={styles.roleFooter}>
+                  <span>Apply Now</span>
+                  <ArrowRight size={16} />
                 </div>
               </button>
             ))}
@@ -416,183 +359,134 @@ export default function VolunteerPage() {
         </div>
       </section>
 
-      {/* APPLICATION FORM */}
-      <section className={styles.formSection}>
+      {/* --- APPLICATION FORM --- */}
+      <section id="application-form" className={styles.formSection}>
         <div className={styles.container}>
-          <div className={styles.splitGrid}>
-            <div className={styles.formIntro}>
-              <span className={styles.sectionTag}>Apply Now</span>
-              <h2 className={styles.formTitle}>Ready to start your journey?</h2>
-              <p className={styles.formLead}>
-                Tell us your primary skill and why you want to volunteer. We’ll review and get back to you as soon as we can.
+          <div className={styles.formLayout}>
+            
+            {/* Form Sidebar/Context */}
+            <div className={styles.formContext}>
+              <h2 className={styles.formHeading}>Ready to start your journey?</h2>
+              <p className={styles.formDescription}>
+                Tell us your primary skill and why you want to volunteer. We review every application personally and will get back to you soon.
               </p>
-
-              <div ref={noticeRef}>
-                {status.type && (
-                  <div
-                    className={`${styles.notice} ${
-                      status.type === 'success'
-                        ? styles.noticeSuccess
-                        : status.type === 'error'
-                          ? styles.noticeError
-                          : styles.noticeLoading
-                    }`}
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <span className={styles.noticeIcon}>
-                      {status.type === 'success' ? (
-                        <CheckCircle2 size={18} />
-                      ) : status.type === 'error' ? (
-                        <AlertCircle size={18} />
-                      ) : (
-                        <Loader2 size={18} className={styles.spin} />
-                      )}
-                    </span>
-                    <span>{status.message}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.formHint}>
-                <p className={styles.formHintTitle}>Tip</p>
-                <p className={styles.formHintText}>
-                  Keep it specific: what you can do, where you’re available, and how soon you can start.
-                </p>
+              
+              <div className={styles.tipBox}>
+                <Sparkles size={16} className={styles.tipIcon} />
+                <div>
+                  <strong>Tip:</strong> Be specific about your availability and how soon you can start.
+                </div>
               </div>
             </div>
 
-            <div className={styles.formCard}>
-              <form onSubmit={handleSubmit} className={styles.volunteerForm}>
-                <div className={styles.inputGroup}>
-                  <label htmlFor="primary_skill">
-                    Primary skill <span className={styles.required}>*</span>
-                  </label>
-                  <select
-                    id="primary_skill"
-                    value={formData.primary_skill}
-                    onChange={(e) => setField('primary_skill', e.target.value)}
-                    className={fieldClass('primary_skill')}
-                    aria-invalid={Boolean(errors.primary_skill)}
-                  >
-                    {skills.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.primary_skill && <p className={styles.errorText}>{errors.primary_skill}</p>}
+            {/* The Form Card */}
+            <div className={styles.formCardWrapper}>
+              <form onSubmit={handleSubmit} className={styles.form}>
+                
+                {/* Status Notices */}
+                <div ref={noticeRef} className={styles.statusArea}>
+                  {status.message && (
+                    <div className={`${styles.alert} ${status.type === 'error' ? styles.alertError : styles.alertSuccess}`}>
+                      {status.loading ? <Loader2 size={18} className={styles.spin} /> : 
+                       status.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                      <span>{status.message}</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className={styles.row}>
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="first_name">
-                      First name <span className={styles.required}>*</span>
-                    </label>
+                <div className={styles.formGroup}>
+                  <label htmlFor="primary_skill" className={styles.label}>Primary Skill</label>
+                  <div className={styles.selectWrapper}>
+                    <select
+                      id="primary_skill"
+                      value={formData.primary_skill}
+                      onChange={(e) => setField('primary_skill', e.target.value)}
+                      className={getInputClass('primary_skill')}
+                    >
+                      {skills.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="first_name" className={styles.label}>First Name</label>
                     <input
                       id="first_name"
                       type="text"
-                      placeholder="First name"
-                      required
+                      className={getInputClass('first_name')}
                       value={formData.first_name}
                       onChange={(e) => setField('first_name', e.target.value)}
-                      autoComplete="given-name"
-                      className={fieldClass('first_name')}
-                      aria-invalid={Boolean(errors.first_name)}
+                      placeholder="Jane"
                     />
-                    {errors.first_name && <p className={styles.errorText}>{errors.first_name}</p>}
+                    {errors.first_name && <span className={styles.errorMsg}>{errors.first_name}</span>}
                   </div>
-
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="last_name">
-                      Last name <span className={styles.required}>*</span>
-                    </label>
+                  
+                  <div className={styles.formGroup}>
+                    <label htmlFor="last_name" className={styles.label}>Last Name</label>
                     <input
                       id="last_name"
                       type="text"
-                      placeholder="Last name"
-                      required
+                      className={getInputClass('last_name')}
                       value={formData.last_name}
                       onChange={(e) => setField('last_name', e.target.value)}
-                      autoComplete="family-name"
-                      className={fieldClass('last_name')}
-                      aria-invalid={Boolean(errors.last_name)}
+                      placeholder="Doe"
                     />
-                    {errors.last_name && <p className={styles.errorText}>{errors.last_name}</p>}
+                    {errors.last_name && <span className={styles.errorMsg}>{errors.last_name}</span>}
                   </div>
                 </div>
 
-                <div className={styles.row}>
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="email">
-                      Email <span className={styles.required}>*</span>
-                    </label>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="email" className={styles.label}>Email Address</label>
                     <input
                       id="email"
                       type="email"
-                      placeholder="you@example.com"
-                      required
+                      className={getInputClass('email')}
                       value={formData.email}
                       onChange={(e) => setField('email', e.target.value)}
-                      autoComplete="email"
-                      className={fieldClass('email')}
-                      aria-invalid={Boolean(errors.email)}
+                      placeholder="jane@example.com"
                     />
-                    {errors.email && <p className={styles.errorText}>{errors.email}</p>}
+                    {errors.email && <span className={styles.errorMsg}>{errors.email}</span>}
                   </div>
 
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="phone">Phone</label>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="phone" className={styles.label}>Phone (Optional)</label>
                     <input
                       id="phone"
                       type="tel"
-                      placeholder="+211 …"
+                      className={getInputClass('phone')}
                       value={formData.phone}
                       onChange={(e) => setField('phone', e.target.value)}
-                      autoComplete="tel"
-                      className={fieldClass('phone')}
-                      aria-invalid={Boolean(errors.phone)}
+                      placeholder="+211..."
                     />
-                    {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
+                    {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
                   </div>
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label htmlFor="reason">
-                    Why do you want to volunteer with CMDI? <span className={styles.required}>*</span>
-                  </label>
+                <div className={styles.formGroup}>
+                  <label htmlFor="reason" className={styles.label}>Why do you want to join?</label>
                   <textarea
                     id="reason"
-                    rows={5}
-                    placeholder="Tell us your story…"
-                    required
+                    rows={4}
+                    className={getInputClass('reason')}
                     value={formData.reason}
                     onChange={(e) => setField('reason', e.target.value)}
-                    maxLength={REASON_MAX}
-                    className={fieldClass('reason')}
-                    aria-invalid={Boolean(errors.reason)}
+                    placeholder="Tell us a bit about yourself and your motivation..."
                   />
-                  <div className={styles.helperRow}>
-                    {errors.reason ? <p className={styles.errorText}>{errors.reason}</p> : <span />}
-                    <span className={styles.charCount}>
-                      {formData.reason.length}/{REASON_MAX}
-                    </span>
+                  <div className={styles.charCount}>
+                    {errors.reason && <span className={styles.errorMsg}>{errors.reason}</span>}
+                    <span>{formData.reason.length}/{REASON_MAX}</span>
                   </div>
                 </div>
 
-                <button type="submit" className={styles.btnPrimary} disabled={status.type === 'loading'}>
-                  {status.type === 'loading' ? 'Sending…' : 'Submit Application'}
-                  <span className={styles.btnIcon}>
-                    <Send size={18} />
-                  </span>
+                <button type="submit" className={styles.submitBtn} disabled={status.loading}>
+                  {status.loading ? 'Sending...' : 'Submit Application'}
+                  {!status.loading && <Send size={18} />}
                 </button>
-
-                <p className={styles.formFootnote}>
+                
+                <p className={styles.disclaimer}>
                   By submitting, you agree to be contacted by CMDI regarding this application.
-                </p>
-
-                <p className={styles.smallDeployNote}>
-                  Deployment note: set <strong>NEXT_PUBLIC_API_BASE_URL</strong> to your backend domain.
                 </p>
               </form>
             </div>
@@ -600,14 +494,14 @@ export default function VolunteerPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className={styles.ctaSection}>
+      {/* --- FOOTER CTA --- */}
+      <section className={styles.footerCta}>
         <div className={styles.container}>
-          <div className={styles.ctaCard}>
-            <h2 className={styles.ctaTitle}>Questions?</h2>
-            <p className={styles.ctaText}>
-              Email us at <span className={styles.ctaEmail}>volunteers@cmdi-ss.org</span>
-            </p>
+          <div className={styles.ctaContent}>
+            <h3>Questions about volunteering?</h3>
+            <a href="mailto:volunteers@cmdi-ss.org" className={styles.ctaLink}>
+              volunteers@cmdi-ss.org <ArrowRight size={16} />
+            </a>
           </div>
         </div>
       </section>
