@@ -9,7 +9,7 @@ import Footer from "@/components/Footer";
 
 /**
  * Rendering behavior
- * (You had these already; keep if you intentionally want no caching)
+ * Keep these only if you intentionally want no caching
  */
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -20,30 +20,37 @@ export const fetchCache = "force-no-store";
 
 const SITE_NAME = "CMDI";
 const SITE_URL = "https://www.cmdi-ss.org"; // canonical host
-
 const TAGLINE = "Supporting Children";
-
 const DEFAULT_TITLE = `${SITE_NAME} | ${TAGLINE}`;
 
 const DESCRIPTION =
   "Children’s Mission for Development Initiative (CMDI) is a child-focused NGO in South Sudan promoting education, protection, health, WASH, and community resilience.";
 
 /**
- * Your logo exists here (from your screenshot):
- * Frontend/public/images/branding/CMDI_Logo.jpeg
- * We'll use it for OG/Twitter previews.
+ * Social preview (OpenGraph/Twitter)
+ * Keep a proper 1200x630 image for best sharing previews
  */
-const BRAND_LOGO = "/images/branding/CMDI_Logo.jpeg";
+const BRAND_LOGO_OG = "/images/branding/CMDI_Logo.jpeg";
 
 /**
- * Favicons are separate files. Put these in Frontend/public/:
- *  - favicon.ico
- *  - icon.png (512x512)
- *  - apple-touch-icon.png (180x180)
+ * ICON FILES (put these in Frontend/public/)
+ *
+ * ✅ Minimum (recommended):
+ *  - /favicon.ico                    (multi-size: 16/32/48 inside)
+ *  - /icon-192.png                   (192x192)
+ *  - /icon-512.png                   (512x512)
+ *  - /apple-touch-icon.png           (180x180)
+ *  - /site.webmanifest               (optional but best practice)
+ *
+ * Why multiple sizes?
+ * Browsers + phones choose the best match for their UI. This is how you get
+ * “bigger / sharper” icons in tabs, bookmarks, and home screens.
  */
 const FAVICON_ICO = "/favicon.ico";
-const ICON_PNG = "/icon.png";
+const ICON_192 = "/icon-192.png";
+const ICON_512 = "/icon-512.png";
 const APPLE_TOUCH = "/apple-touch-icon.png";
+const MANIFEST = "/site.webmanifest";
 
 /* -----------------------------
    Metadata (SEO)
@@ -86,7 +93,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: BRAND_LOGO,
+        url: BRAND_LOGO_OG,
         width: 1200,
         height: 630,
         alt: `${SITE_NAME} — ${TAGLINE}`,
@@ -98,20 +105,30 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: DEFAULT_TITLE,
     description: DESCRIPTION,
-    images: [BRAND_LOGO],
+    images: [BRAND_LOGO_OG],
   },
 
   /**
-   * Browser tab / address-bar icon
-   * (These files MUST exist in /public)
+   * PWA / install support (optional but recommended)
+   * If you create Frontend/public/site.webmanifest, Next will link it.
+   */
+  manifest: MANIFEST,
+
+  /**
+   * Favicons / app icons
+   * Browsers decide display size; we provide multiple sizes so the best one is chosen.
    */
   icons: {
     icon: [
-      { url: FAVICON_ICO },
-      { url: ICON_PNG, type: "image/png" },
+      // Classic browsers: .ico (should include multiple internal sizes)
+      { url: FAVICON_ICO, type: "image/x-icon" },
+
+      // Modern PNG icons (higher-res = sharper)
+      { url: ICON_192, type: "image/png", sizes: "192x192" },
+      { url: ICON_512, type: "image/png", sizes: "512x512" },
     ],
+    apple: [{ url: APPLE_TOUCH, sizes: "180x180" }],
     shortcut: [{ url: FAVICON_ICO }],
-    apple: [{ url: APPLE_TOUCH }],
   },
 };
 
