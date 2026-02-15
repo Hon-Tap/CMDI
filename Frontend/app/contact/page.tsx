@@ -189,7 +189,7 @@ export default function ContactPage() {
   };
 
   const contactEmail = 'info@cmdi-ss.org';
-  const contactPhone = '+211 000 000 000'; // replace when ready
+  const contactPhone = '+211929045655'; 
   const contactLocation = 'Juba, South Sudan';
 
   return (
