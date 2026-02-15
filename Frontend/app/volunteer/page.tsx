@@ -417,7 +417,7 @@ export default function VolunteerPage() {
                       className={getInputClass('first_name')}
                       value={formData.first_name}
                       onChange={(e) => setField('first_name', e.target.value)}
-                      placeholder="Jane"
+                      placeholder="First Name..."
                     />
                     {errors.first_name && <span className={styles.errorMsg}>{errors.first_name}</span>}
                   </div>
@@ -430,7 +430,7 @@ export default function VolunteerPage() {
                       className={getInputClass('last_name')}
                       value={formData.last_name}
                       onChange={(e) => setField('last_name', e.target.value)}
-                      placeholder="Doe"
+                      placeholder="Last Name..."
                     />
                     {errors.last_name && <span className={styles.errorMsg}>{errors.last_name}</span>}
                   </div>
