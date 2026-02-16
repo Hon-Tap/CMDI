@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Volunteer;
-use Exception;
 
 class VolunteerController
 {
+    /**
+     * Safe length helper (works even if mbstring is missing)
+     */
+    private function slen(string $s): int
+    {
+        return function_exists('mb_strlen') ? mb_strlen($s) : strlen($s);
+    }
+
     /**
      * GET /api/volunteers
      * - Default: returns newest first in { success, data, count }
@@ -17,7 +24,7 @@ class VolunteerController
     public function index(): void
     {
         try {
-            $countOnly = isset($_GET['count']) && in_array((string)$_GET['count'], ['1', 'true'], true);
+            $countOnly = isset($_GET['count']) && in_array((string) $_GET['count'], ['1', 'true'], true);
 
             if ($countOnly) {
                 // If your ORM supports count(), use it.
@@ -39,7 +46,10 @@ class VolunteerController
                 'data' => $rows,
                 'count' => is_countable($rows) ? count($rows) : null,
             ]);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            error_log('VOLUNTEER INDEX ERROR: ' . $e->getMessage());
+            error_log($e->getTraceAsString());
+
             json([
                 'success' => false,
                 'message' => 'Failed to load volunteers.',
@@ -87,28 +97,28 @@ class VolunteerController
             }
 
             // Guard sizes (practical limits; DB is text)
-            if (mb_strlen($firstName) > 120 || mb_strlen($lastName) > 120) {
+            if ($this->slen($firstName) > 120 || $this->slen($lastName) > 120) {
                 json(['success' => false, 'message' => 'Name is too long'], 400);
                 return;
             }
 
-            if (mb_strlen($email) > 190) {
+            if ($this->slen($email) > 190) {
                 json(['success' => false, 'message' => 'Email is too long'], 400);
                 return;
             }
 
-            if ($phone !== '' && mb_strlen($phone) > 60) {
+            if ($phone !== '' && $this->slen($phone) > 60) {
                 json(['success' => false, 'message' => 'Phone is too long'], 400);
                 return;
             }
 
-            if (mb_strlen($skill) > 120) {
+            if ($this->slen($skill) > 120) {
                 json(['success' => false, 'message' => 'Primary skill is too long'], 400);
                 return;
             }
 
             // Align with your frontend (REASON_MAX = 800)
-            if (mb_strlen($reason) > 800) {
+            if ($this->slen($reason) > 800) {
                 json(['success' => false, 'message' => 'Reason is too long (max 800 characters)'], 400);
                 return;
             }
@@ -130,7 +140,6 @@ class VolunteerController
                 'phone'         => ($phone === '' ? null : $phone),
                 'primary_skill' => $skill,
                 'reason'        => $reason,
-                // created_at should be handled by DB default NOW() if configured
             ]);
 
             json([
@@ -138,7 +147,11 @@ class VolunteerController
                 'message' => 'Volunteer registered',
                 'data' => $row,
             ], 201);
-        } catch (Exception $e) {
+
+        } catch (\Throwable $e) {
+            error_log('VOLUNTEER STORE ERROR: ' . $e->getMessage());
+            error_log($e->getTraceAsString());
+
             json([
                 'success' => false,
                 'message' => 'Submission failed.',
