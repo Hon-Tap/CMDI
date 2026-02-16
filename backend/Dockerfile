@@ -26,3 +26,11 @@ RUN test -f /var/www/html/index.php \
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 EXPOSE 80
+# ...
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+COPY . .
+# ...
