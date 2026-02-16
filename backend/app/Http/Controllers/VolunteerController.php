@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Volunteer;
-use Exception;
 
 class VolunteerController
 {
@@ -17,33 +16,33 @@ class VolunteerController
     public function index(): void
     {
         try {
-            $countOnly = isset($_GET['count']) && in_array((string)$_GET['count'], ['1', 'true'], true);
+            $countOnly = isset($_GET['count']) && in_array((string) $_GET['count'], ['1', 'true'], true);
 
             if ($countOnly) {
-                // If your ORM supports count(), use it.
-                // $count = Volunteer::count();
-
-                $all = Volunteer::all();
+                // If your ORM supports count(), you can switch to: $count = Volunteer::count();
+                $all   = Volunteer::all();
                 $count = is_countable($all) ? count($all) : 0;
 
                 json(['success' => true, 'count' => $count]);
                 return;
             }
 
-            // Prefer newest first
-            // Assumes ORM supports orderBy()->get()
+            // Prefer newest first (assumes ORM supports orderBy()->get())
             $rows = Volunteer::orderBy('created_at', 'desc')->get();
 
             json([
                 'success' => true,
-                'data' => $rows,
-                'count' => is_countable($rows) ? count($rows) : null,
+                'data'    => $rows,
+                'count'   => is_countable($rows) ? count($rows) : null,
             ]);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            error_log('VOLUNTEER INDEX ERROR: ' . $e->getMessage());
+            error_log($e->getTraceAsString());
+
             json([
                 'success' => false,
                 'message' => 'Failed to load volunteers.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -63,15 +62,20 @@ class VolunteerController
                 return;
             }
 
-            // Normalize inputs (DB columns are text, created_at is DB-managed)
-            $firstName = trim((string)($data['first_name'] ?? ''));
-            $lastName  = trim((string)($data['last_name'] ?? ''));
-            $email     = strtolower(trim((string)($data['email'] ?? '')));
-            $phone     = trim((string)($data['phone'] ?? ''));
-            $skill     = trim((string)($data['primary_skill'] ?? ''));
-            $reason    = trim((string)($data['reason'] ?? ''));
+            // Safe length helper (works even if mbstring is missing)
+            $len = function (string $s): int {
+                return function_exists('mb_strlen') ? mb_strlen($s) : strlen($s);
+            };
 
-            // Required fields
+            // Normalize inputs
+            $firstName = trim((string) ($data['first_name'] ?? ''));
+            $lastName  = trim((string) ($data['last_name'] ?? ''));
+            $email     = strtolower(trim((string) ($data['email'] ?? '')));
+            $phone     = trim((string) ($data['phone'] ?? ''));
+            $skill     = trim((string) ($data['primary_skill'] ?? ''));
+            $reason    = trim((string) ($data['reason'] ?? ''));
+
+            // Required fields (matches your controller + frontend expectations)
             if ($firstName === '' || $lastName === '' || $email === '' || $skill === '' || $reason === '') {
                 json([
                     'success' => false,
@@ -86,43 +90,48 @@ class VolunteerController
                 return;
             }
 
-            // Guard sizes (practical limits; DB is text)
-            if (mb_strlen($firstName) > 120 || mb_strlen($lastName) > 120) {
+            // Guard sizes
+            if ($len($firstName) > 120 || $len($lastName) > 120) {
                 json(['success' => false, 'message' => 'Name is too long'], 400);
                 return;
             }
 
-            if (mb_strlen($email) > 190) {
+            if ($len($email) > 190) {
                 json(['success' => false, 'message' => 'Email is too long'], 400);
                 return;
             }
 
-            if ($phone !== '' && mb_strlen($phone) > 60) {
+            if ($phone !== '' && $len($phone) > 60) {
                 json(['success' => false, 'message' => 'Phone is too long'], 400);
                 return;
             }
 
-            if (mb_strlen($skill) > 120) {
+            if ($len($skill) > 120) {
                 json(['success' => false, 'message' => 'Primary skill is too long'], 400);
                 return;
             }
 
-            // Align with your frontend (REASON_MAX = 800)
-            if (mb_strlen($reason) > 800) {
+            // Align with frontend REASON_MAX = 800
+            if ($len($reason) > 800) {
                 json(['success' => false, 'message' => 'Reason is too long (max 800 characters)'], 400);
                 return;
             }
 
-            // Prevent duplicates by email
-            $existing = Volunteer::where('email', $email)->first();
-            if ($existing) {
-                json([
-                    'success' => false,
-                    'message' => 'A volunteer application with this email already exists.',
-                ], 409);
-                return;
+            // NOTE:
+            // - If you added a UNIQUE index on volunteers.email (recommended), the DB is the source of truth for duplicates.
+            // - If your ORM supports where()->first(), you can keep a friendly 409 message, but it can also be removed.
+            if (method_exists(Volunteer::class, 'where')) {
+                $existing = Volunteer::where('email', $email)->first();
+                if ($existing) {
+                    json([
+                        'success' => false,
+                        'message' => 'A volunteer application with this email already exists.',
+                    ], 409);
+                    return;
+                }
             }
 
+            // Create row
             $row = Volunteer::create([
                 'first_name'    => $firstName,
                 'last_name'     => $lastName,
@@ -130,19 +139,21 @@ class VolunteerController
                 'phone'         => ($phone === '' ? null : $phone),
                 'primary_skill' => $skill,
                 'reason'        => $reason,
-                // created_at should be handled by DB default NOW() if configured
             ]);
 
             json([
                 'success' => true,
                 'message' => 'Volunteer registered',
-                'data' => $row,
+                'data'    => $row,
             ], 201);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            error_log('VOLUNTEER STORE ERROR: ' . $e->getMessage());
+            error_log($e->getTraceAsString());
+
             json([
                 'success' => false,
                 'message' => 'Submission failed.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
