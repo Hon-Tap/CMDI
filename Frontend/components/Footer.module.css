@@ -285,10 +285,19 @@
   flex-wrap: wrap;
 }
 
+/* ✅ legalLink now supports <button> too (keeps same look) */
 .legalLink {
   color: rgba(255, 255, 255, 0.70);
   text-decoration: none;
   transition: color 160ms ease;
+
+  /* button reset */
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .legalLink:hover {
@@ -333,5 +342,284 @@
 @media (max-width: 520px) {
   .staffLink {
     padding: 9px 12px; /* slightly bigger tap target */
+  }
+}
+
+/* =========================================================
+   MODAL (animated, responsive, scrollable)
+   ========================================================= */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: grid;
+  place-items: center;
+
+  padding: clamp(12px, 3vw, 18px);
+
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.modalOverlayOpen {
+  opacity: 1;
+}
+
+.modalOverlayClosing {
+  opacity: 0;
+}
+
+.modal {
+  width: min(920px, 100%);
+  max-height: min(86vh, 780px);
+
+  border-radius: 18px;
+
+  background: linear-gradient(180deg, rgba(10, 27, 53, 0.94), rgba(7, 17, 36, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+
+  box-shadow: 0 30px 90px -38px rgba(0, 0, 0, 0.85);
+
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+
+  transform: translateY(12px) scale(0.99);
+  opacity: 0;
+
+  transition: transform 200ms ease, opacity 180ms ease;
+}
+
+.modalOpen {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.modalClosing {
+  transform: translateY(10px) scale(0.992);
+  opacity: 0;
+}
+
+.modalHeader {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modalTitleRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.modalIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(135deg, rgba(36, 167, 255, 0.22), rgba(11, 120, 255, 0.10));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(36, 167, 255, 0.95);
+}
+
+.modalTitles {
+  display: grid;
+  gap: 2px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+}
+
+.modalSubtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.modalClose {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+  opacity: 0.95;
+}
+
+.modalClose:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(36, 167, 255, 0.22);
+  opacity: 1;
+}
+
+.modalBody {
+  padding: 14px 16px 16px;
+  overflow: auto;
+}
+
+/* subtle scrollbar */
+.modalBody::-webkit-scrollbar {
+  width: 10px;
+}
+.modalBody::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+.modalBody::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modalFooter {
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modalPrimary,
+.modalSecondary {
+  height: 42px;
+  border-radius: 14px;
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-weight: 750;
+  letter-spacing: 0.2px;
+
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+
+.modalPrimary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, rgba(36, 167, 255, 0.30), rgba(11, 120, 255, 0.18));
+  color: var(--ink);
+}
+
+.modalPrimary:hover {
+  transform: translateY(-1px);
+  border-color: rgba(36, 167, 255, 0.30);
+}
+
+.modalSecondary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  opacity: 0.95;
+}
+
+.modalSecondary:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(36, 167, 255, 0.22);
+  opacity: 1;
+}
+
+/* LEGAL TYPOGRAPHY */
+.legalDoc {
+  color: var(--muted);
+  line-height: 1.65;
+  font-size: 14.5px;
+}
+
+.legalMeta {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.60);
+  font-size: 13px;
+}
+
+.legalDoc h3 {
+  margin: 14px 0 6px;
+  color: rgba(255, 255, 255, 0.90);
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+.legalDoc ul {
+  margin: 8px 0 0 18px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.inlineLink {
+  color: rgba(255, 255, 255, 0.90);
+  text-decoration: underline;
+  text-decoration-color: rgba(36, 167, 255, 0.35);
+}
+
+.inlineLink:hover {
+  text-decoration-color: rgba(36, 167, 255, 0.70);
+}
+
+.legalNote {
+  margin-top: 14px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.70);
+}
+
+@media (max-width: 520px) {
+  .modalHeader {
+    padding: 14px 14px 10px;
+  }
+  .modalBody {
+    padding: 12px 14px 14px;
+  }
+  .modalFooter {
+    padding: 10px 14px 14px;
+    justify-content: stretch;
+  }
+  .modalPrimary,
+  .modalSecondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modal,
+  .modalClose,
+  .modalPrimary,
+  .modalSecondary {
+    transition: none !important;
   }
 }
