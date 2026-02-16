@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Volunteer;
+use Throwable;
+use PDOException;
 
 class VolunteerController
 {
@@ -14,6 +16,65 @@ class VolunteerController
     private function slen(string $s): int
     {
         return function_exists('mb_strlen') ? mb_strlen($s) : strlen($s);
+    }
+
+    /**
+     * Best-effort SMTP notify (won't break the request if mail fails).
+     * Requires PHPMailer installed (composer require phpmailer/phpmailer).
+     */
+    private function notify(string $to, string $subject, string $body, ?string $replyToEmail = null, ?string $replyToName = null): void
+    {
+        try {
+            $host = (string) getenv('SMTP_HOST');
+            $user = (string) getenv('SMTP_USER');
+            $pass = (string) getenv('SMTP_PASS');
+            $port = (int) (getenv('SMTP_PORT') ?: 587);
+
+            // Some people paste app-password with spaces; strip them safely.
+            $pass = preg_replace('/\s+/', '', $pass ?? '');
+
+            if ($host === '' || $user === '' || $pass === '' || $to === '') {
+                error_log('MAILER: missing SMTP_* or TO env');
+                return;
+            }
+
+            if (!class_exists(\PHPMailer\PHPMailer\PHPMailer::class)) {
+                error_log('MAILER: PHPMailer not installed');
+                return;
+            }
+
+            $fromEmail = (string) (getenv('MAIL_FROM') ?: $user);
+            $fromName  = (string) (getenv('MAIL_FROM_NAME') ?: 'CMDI Website');
+
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mail->isSMTP();
+            $mail->Host       = $host;
+            $mail->SMTPAuth   = true;
+            $mail->Username   = $user;
+            $mail->Password   = $pass;
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = $port;
+            $mail->CharSet    = 'UTF-8';
+
+            // Gmail is happiest when Sender is the authenticated mailbox
+            $mail->Sender = $user;
+
+            $mail->setFrom($fromEmail, $fromName);
+            $mail->addAddress($to);
+
+            if ($replyToEmail) {
+                $mail->addReplyTo($replyToEmail, $replyToName ?: $replyToEmail);
+            }
+
+            $mail->Subject = $subject;
+            $mail->isHTML(false);
+            $mail->Body    = $body;
+            $mail->AltBody = $body;
+
+            $mail->send();
+        } catch (Throwable $e) {
+            error_log('MAILER ERROR: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -27,9 +88,6 @@ class VolunteerController
             $countOnly = isset($_GET['count']) && in_array((string) $_GET['count'], ['1', 'true'], true);
 
             if ($countOnly) {
-                // If your ORM supports count(), use it.
-                // $count = Volunteer::count();
-
                 $all = Volunteer::all();
                 $count = is_countable($all) ? count($all) : 0;
 
@@ -37,8 +95,6 @@ class VolunteerController
                 return;
             }
 
-            // Prefer newest first
-            // Assumes ORM supports orderBy()->get()
             $rows = Volunteer::orderBy('created_at', 'desc')->get();
 
             json([
@@ -46,7 +102,7 @@ class VolunteerController
                 'data' => $rows,
                 'count' => is_countable($rows) ? count($rows) : null,
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             error_log('VOLUNTEER INDEX ERROR: ' . $e->getMessage());
             error_log($e->getTraceAsString());
 
@@ -73,7 +129,6 @@ class VolunteerController
                 return;
             }
 
-            // Normalize inputs (DB columns are text, created_at is DB-managed)
             $firstName = trim((string)($data['first_name'] ?? ''));
             $lastName  = trim((string)($data['last_name'] ?? ''));
             $email     = strtolower(trim((string)($data['email'] ?? '')));
@@ -81,7 +136,6 @@ class VolunteerController
             $skill     = trim((string)($data['primary_skill'] ?? ''));
             $reason    = trim((string)($data['reason'] ?? ''));
 
-            // Required fields
             if ($firstName === '' || $lastName === '' || $email === '' || $skill === '' || $reason === '') {
                 json([
                     'success' => false,
@@ -90,13 +144,11 @@ class VolunteerController
                 return;
             }
 
-            // Basic validation
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 json(['success' => false, 'message' => 'Invalid email address'], 400);
                 return;
             }
 
-            // Guard sizes (practical limits; DB is text)
             if ($this->slen($firstName) > 120 || $this->slen($lastName) > 120) {
                 json(['success' => false, 'message' => 'Name is too long'], 400);
                 return;
@@ -117,13 +169,11 @@ class VolunteerController
                 return;
             }
 
-            // Align with your frontend (REASON_MAX = 800)
             if ($this->slen($reason) > 800) {
                 json(['success' => false, 'message' => 'Reason is too long (max 800 characters)'], 400);
                 return;
             }
 
-            // Prevent duplicates by email
             $existing = Volunteer::where('email', $email)->first();
             if ($existing) {
                 json([
@@ -142,13 +192,46 @@ class VolunteerController
                 'reason'        => $reason,
             ]);
 
+            // Email notify (best-effort)
+            $to = (string) getenv('MAIL_TO_VOLUNTEERS');
+            if ($to === '') $to = (string) getenv('MAIL_TO_INFO');
+            if ($to === '') $to = (string) getenv('SMTP_USER');
+
+            $subject = 'CMDI: New Volunteer Application';
+            $body =
+                "New volunteer application received\n\n" .
+                "Name: {$firstName} {$lastName}\n" .
+                "Email: {$email}\n" .
+                "Phone: " . ($phone !== '' ? $phone : '-') . "\n" .
+                "Primary skill: {$skill}\n\n" .
+                "Reason:\n{$reason}\n\n" .
+                "----\nSent from cmdi-ss.org";
+
+            $this->notify($to, $subject, $body, $email, "{$firstName} {$lastName}");
+
             json([
                 'success' => true,
                 'message' => 'Volunteer registered',
                 'data' => $row,
             ], 201);
+        } catch (PDOException $e) {
+            // If you later add UNIQUE(email), handle duplicate gracefully.
+            // Postgres unique violation SQLSTATE is 23505.
+            if ((string) $e->getCode() === '23505') {
+                json([
+                    'success' => false,
+                    'message' => 'A volunteer application with this email already exists.',
+                ], 409);
+                return;
+            }
 
-        } catch (\Throwable $e) {
+            error_log('VOLUNTEER STORE PDO ERROR: ' . $e->getMessage());
+            json([
+                'success' => false,
+                'message' => 'Submission failed.',
+                'error' => $e->getMessage(),
+            ], 500);
+        } catch (Throwable $e) {
             error_log('VOLUNTEER STORE ERROR: ' . $e->getMessage());
             error_log($e->getTraceAsString());
 
