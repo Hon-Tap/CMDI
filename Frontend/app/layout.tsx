@@ -111,7 +111,6 @@ export const metadata: Metadata = {
    * PWA / install support (optional but recommended)
    * If you create Frontend/public/site.webmanifest, Next will link it.
    */
-  manifest: MANIFEST,
 
   /**
    * Favicons / app icons
