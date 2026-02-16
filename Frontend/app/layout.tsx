@@ -50,7 +50,6 @@ const FAVICON_ICO = "/favicon.ico";
 const ICON_192 = "/icon-192.png";
 const ICON_512 = "/icon-512.png";
 const APPLE_TOUCH = "/apple-touch-icon.png";
-const MANIFEST = "/site.webmanifest";
 
 /* -----------------------------
    Metadata (SEO)
