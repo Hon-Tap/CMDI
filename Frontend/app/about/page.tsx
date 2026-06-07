@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import styles from './about.module.css';
 import {
   ArrowRight,
   BadgeCheck,
@@ -11,7 +10,7 @@ import {
   Calendar,
   Globe,
   Heart,
-  Lightbulb,
+  Handshake,
   Mail,
   MapPin,
   Phone,
@@ -19,6 +18,7 @@ import {
   Target,
   Users,
   X,
+  TrendingUp
 } from 'lucide-react';
 
 type LeadershipKey =
@@ -36,31 +36,26 @@ type LeadershipMember = {
   responsibilities: string[];
 };
 
-type RoleCard = {
-  title: string;
-  responsibilities: string[];
-};
-
 export default function AboutPage() {
-  // --- reveal-on-scroll animations (small, tasteful) ---
+  // --- Enhanced Reveal-on-Scroll Animations ---
   useEffect(() => {
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal="true"]'));
-    if (!nodes.length) return;
-
-    const io = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add(styles.inView);
-            io.unobserve(e.target);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.remove('opacity-0', 'translate-y-8');
+            entry.target.classList.add('opacity-100', 'translate-y-0');
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.12, rootMargin: '0px 0px -10% 0px' }
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    nodes.forEach((n) => io.observe(n));
-    return () => io.disconnect();
+    const nodes = document.querySelectorAll('.reveal-target');
+    nodes.forEach((n) => observer.observe(n));
+
+    return () => observer.disconnect();
   }, []);
 
   const leadership: LeadershipMember[] = useMemo(
@@ -125,72 +120,6 @@ export default function AboutPage() {
     []
   );
 
-  const roles: RoleCard[] = useMemo(
-    () => [
-      {
-        title: 'Monitoring, Evaluation & Learning (MEAL) Officer',
-        responsibilities: [
-          'Designs and implements M&E frameworks and tools',
-          'Collects, analyzes, and reports project data',
-          'Tracks performance indicators and outputs',
-          'Leads learning and improvement processes',
-          'Ensures accountability and feedback mechanisms',
-        ],
-      },
-      {
-        title: 'Education Program Officer',
-        responsibilities: [
-          'Leads education activities and supports schools',
-          'Coordinates with Education Cluster and authorities',
-          'Trains teachers and school management committees',
-          'Distributes learning materials and supports curriculum',
-          'Monitors enrollment, retention, and performance',
-        ],
-      },
-      {
-        title: 'Child Protection Officer',
-        responsibilities: [
-          'Leads child protection and safeguarding programming',
-          'Handles case management and referral systems',
-          'Trains staff and communities on child rights and safety',
-          'Establishes and supports child protection committees',
-          'Coordinates with the Child Protection Cluster',
-        ],
-      },
-      {
-        title: 'WASH Officer',
-        responsibilities: [
-          'Plans and implements WASH projects in schools and communities',
-          'Leads hygiene promotion and sanitation campaigns',
-          'Coordinates water infrastructure and repairs',
-          'Trains community volunteers on hygiene and water use',
-          'Monitors WASH indicators and reports progress',
-        ],
-      },
-      {
-        title: 'Logistics & Procurement Officer',
-        responsibilities: [
-          'Manages procurement of goods and services',
-          'Coordinates logistics, transport, and warehousing',
-          'Ensures asset tracking and inventory management',
-          'Supports field delivery and supply chain needs',
-          'Prepares procurement plans and vendor databases',
-        ],
-      },
-      {
-        title: 'Communications & Fundraising Officer',
-        responsibilities: [
-          'Leads organizational visibility and storytelling',
-          'Prepares donor reports, newsletters, and media',
-          'Maintains website and social media platforms',
-          'Develops fundraising proposals and campaigns',
-          'Builds relationships with donors and partners',
-        ],
-      },
-    ],
-    []
-  );
-
   const coreValues = useMemo(
     () => [
       'Child centeredness',
@@ -200,66 +129,6 @@ export default function AboutPage() {
       'Partnership',
       'Compassion',
       'Inclusiveness',
-      'Accountability',
-      'Sustainability',
-    ],
-    []
-  );
-
-  const objectives = useMemo(
-    () => [
-      {
-        title: 'Improve access to education',
-        text:
-          'Address conflict, poverty, and social barriers while investing in infrastructure, teacher training, inclusive education, accelerated learning, and school meals.',
-        icon: <Target size={18} />,
-      },
-      {
-        title: 'Strengthen healthcare systems',
-        text:
-          'Support routine immunization and continuous access to care by engaging families and communities to improve health equity in under-served areas.',
-        icon: <Heart size={18} />,
-      },
-      {
-        title: 'Provide child protection services',
-        text:
-          'Prevent and respond to violence against children, promote positive parenting, and ensure access to education, health, and psychosocial support.',
-        icon: <Shield size={18} />,
-      },
-      {
-        title: 'Improve WASH (Water, Sanitation & Hygiene)',
-        text:
-          'Increase access to safe water and sanitation through boreholes, purification solutions, latrines, and hygiene promotion with strong monitoring.',
-        icon: <Globe size={18} />,
-      },
-      {
-        title: 'Peace-building and reconciliation',
-        text:
-          'Transform negative relationships, repair community structures, and strengthen belonging through inclusive dialogue and conflict resolution.',
-        icon: <Users size={18} />,
-      },
-      {
-        title: 'Youth & women empowerment',
-        text:
-          'Deliver vocational training, life skills, microfinance and income-generating initiatives, mentorship, and leadership development.',
-        icon: <Lightbulb size={18} />,
-      },
-      {
-        title: 'Livelihoods',
-        text: 'Skills training for youth and parents to strengthen household resilience and self-reliance.',
-        icon: <BadgeCheck size={18} />,
-      },
-    ],
-    []
-  );
-
-  const areasOfFocus = useMemo(
-    () => [
-      'Education',
-      'Child Protection',
-      'WASH (Water, Sanitation and Hygiene)',
-      'Emergency Response & Resilience',
-      'Advocacy and Community Engagement',
     ],
     []
   );
@@ -267,55 +136,61 @@ export default function AboutPage() {
   const [openKey, setOpenKey] = useState<LeadershipKey | null>(null);
   const activeMember = leadership.find((m) => m.key === openKey) ?? null;
 
-  const openModal = (key: LeadershipKey) => setOpenKey(key);
-  const closeModal = () => setOpenKey(null);
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (activeMember) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [activeMember]);
+
+  // Utility to help with transition classes
+  const revealClass = "reveal-target opacity-0 translate-y-8 transition-all duration-[800ms] ease-out";
 
   return (
-    <main className={styles.page}>
-      {/* HERO */}
-      <section className={styles.hero}>
-        <div className={styles.heroOverlay} aria-hidden="true" />
-
-        <div className={styles.container}>
-          <div className={styles.heroGrid}>
-            <div className={`${styles.heroText} ${styles.reveal}`} data-reveal="true">
-              <p className={styles.kicker}>Children’s Mission For Development Initiative</p>
-              <h1 className={styles.heroTitle}>CMDI</h1>
-              <p className={styles.motto}>Motto: Empowering Children and Transforming Communities.</p>
-
-              <p className={styles.heroLead}>
-                CMDI is a child-focused, community-driven non-profit organization dedicated to
-                promoting the rights, well-being, and holistic development of vulnerable children.
-                We create sustainable change by empowering children, families, and communities
-                through education, health care, child protection, and economic empowerment.
+    <main className="bg-slate-50 text-slate-800 font-sans pt-20 overflow-hidden">
+      {/* HERO SECTION - Institutional & Humanized */}
+      <section className="relative bg-[#071f2f] text-white py-20 lg:py-32">
+        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #0c74a5 0%, transparent 50%), radial-gradient(circle at 80% 100%, #0284c7 0%, transparent 50%)' }} />
+        
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className={revealClass}>
+              <p className="text-sky-400 font-bold tracking-widest uppercase text-sm mb-4">
+                Children’s Mission For Development Initiative
+              </p>
+              <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight mb-6 leading-[1.1]">
+                Standing with the Children of South Sudan
+              </h1>
+              <div className="border-l-4 border-sky-500 pl-4 mb-8">
+                <p className="text-xl lg:text-2xl font-medium text-slate-200">
+                  Empowering generations. Transforming communities.
+                </p>
+              </div>
+              <p className="text-lg text-slate-300 leading-relaxed mb-10 max-w-xl">
+                We believe every child deserves a safe, nurturing environment to grow, learn, and thrive. Born from a deep commitment to under-served communities, CMDI works hand-in-hand with families to break cycles of poverty and build sustainable resilience.
               </p>
 
-              <div className={styles.heroActions}>
-                <Link href="/donate" className={styles.btnPrimary} scroll>
-                  Donate <ArrowRight size={18} />
+              <div className="flex flex-wrap gap-4">
+                <Link href="/donate" className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold px-8 py-3.5 rounded-full transition-all hover:shadow-lg hover:shadow-sky-600/30">
+                  Support Our Mission <ArrowRight size={18} />
                 </Link>
-                <Link href="/partner-with-us" className={styles.ctaSecondaryBtn} scroll>
-                  Partner With Us <ArrowRight size={18} />
+                <Link href="/partner-with-us" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm text-white font-semibold px-8 py-3.5 rounded-full transition-all">
+                  Partner With Us
                 </Link>
-
               </div>
             </div>
 
-            <div
-              className={`${styles.heroMedia} ${styles.reveal}`}
-              data-reveal="true"
-              style={{ ['--d' as any]: '120ms' }}
-            >
+            <div className={`${revealClass} relative h-[400px] lg:h-[550px] w-full rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10`} style={{ transitionDelay: '200ms' }}>
               <Image
                 src="/images/about/story-image.jpeg"
-                alt="CMDI supporting vulnerable children and children with disabilities"
+                alt="CMDI supporting vulnerable children"
                 fill
-                className={styles.heroImg}
+                className="object-cover hover:scale-105 transition-transform duration-1000"
                 priority
-                sizes="(max-width: 960px) 92vw, 520px"
+                sizes="(max-width: 1024px) 100vw, 50vw"
               />
-              <div className={styles.heroMediaBadge}>
-                <BadgeCheck size={16} />
+              <div className="absolute bottom-6 left-6 bg-[#071f2f]/80 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full flex items-center gap-2 text-sm font-semibold">
+                <BadgeCheck size={18} className="text-sky-400" />
                 Registered NGO • South Sudan
               </div>
             </div>
@@ -323,476 +198,292 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* PROFILE OVERVIEW */}
-      <section className={styles.section}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
-            <h2 className={styles.sectionTitle}>Profile Overview</h2>
-            <p className={styles.sectionSubtext}>
-              Key details about CMDI’s registration, location, and operational footprint.
-            </p>
-          </div>
-
-          <div className={styles.factsGrid}>
-            <div className={`${styles.factCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.factIcon}>
-                <Building2 size={18} />
-              </div>
-              <div>
-                <p className={styles.factLabel}>Type</p>
-                <p className={styles.factValue}>Non-Profit, Non-Governmental Organization (NGO)</p>
-              </div>
-            </div>
-
-            <div className={`${styles.factCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.factIcon}>
-                <Calendar size={18} />
-              </div>
-              <div>
-                <p className={styles.factLabel}>Founded / Registered</p>
-                <p className={styles.factValue}>Founded in 2022 • Officially registered in 2025</p>
-              </div>
-            </div>
-
-            <div className={`${styles.factCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.factIcon}>
-                <BadgeCheck size={18} />
-              </div>
-              <div>
-                <p className={styles.factLabel}>Registration</p>
-                <p className={styles.factValue}>
-                  Reg. No: 5899,/NGO//2025 • Registered under the NGO Act of South Sudan
-                </p>
-              </div>
-            </div>
-
-            <div className={`${styles.factCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.factIcon}>
-                <MapPin size={18} />
-              </div>
-              <div>
-                <p className={styles.factLabel}>Location</p>
-                <p className={styles.factValue}>HQ: Juba • Field Office: Fangak County</p>
-              </div>
-            </div>
-
-            <div className={`${styles.factCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.factIcon}>
-                <Mail size={18} />
-              </div>
-              <div>
-                <p className={styles.factLabel}>Email</p>
-                <p className={styles.factValue}>cmdi67768@gmail.com</p>
-              </div>
-            </div>
-
-            <div className={`${styles.factCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.factIcon}>
-                <Phone size={18} />
-              </div>
-              <div>
-                <p className={styles.factLabel}>Phone</p>
-                <p className={styles.factValue}>+211 929 045 655</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ABOUT + WHY */}
-      <section className={styles.sectionAlt}>
-        <div className={styles.container}>
-          <div className={styles.twoCol}>
-            <div className={`${styles.card} ${styles.reveal}`} data-reveal="true">
-              <p className={styles.eyebrow}>About Us</p>
-              <h3 className={styles.cardTitle}>Child-focused support, led by communities.</h3>
-              <p className={styles.cardText}>
-                CMDI was established in response to the growing challenges faced by children in
-                under-served regions. Our programs aim to break the cycle of poverty and ensure that
-                every child has the opportunity to reach their full potential in a safe and
-                nurturing environment.
-              </p>
-              <div className={styles.callouts}>
-                <div className={styles.callout}>
-                  <Shield size={18} />
-                  <span>Protection & safeguarding</span>
+      {/* PROFILE OVERVIEW - Clean Data Presentation */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: Building2, label: 'Entity Type', value: 'Non-Profit, NGO' },
+              { icon: Calendar, label: 'Established', value: 'Founded 2022 • Reg. 2025' },
+              { icon: BadgeCheck, label: 'Registration', value: 'No: 5899,/NGO//2025' },
+              { icon: MapPin, label: 'Operations', value: 'HQ: Juba • Field: Fangak' },
+            ].map((fact, i) => (
+              <div key={i} className={`${revealClass} bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col gap-3 hover:shadow-md transition-shadow`} style={{ transitionDelay: `${i * 100}ms` }}>
+                <div className="text-sky-600">
+                  <fact.icon size={26} />
                 </div>
-                <div className={styles.callout}>
-                  <Globe size={18} />
-                  <span>Access & inclusion</span>
+                <div>
+                  <p className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-1">{fact.label}</p>
+                  <p className="text-slate-600 leading-snug">{fact.value}</p>
                 </div>
-                <div className={styles.callout}>
-                  <Users size={18} />
-                  <span>Community-driven delivery</span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`${styles.card} ${styles.reveal}`}
-              data-reveal="true"
-              style={{ ['--d' as any]: '120ms' }}
-            >
-              <p className={styles.eyebrow}>Geographical Focus</p>
-              <h3 className={styles.cardTitle}>Fangak County today — expanding tomorrow.</h3>
-              <p className={styles.cardText}>
-                CMDI primarily operates in Fangak County, Jonglei State, South Sudan, with plans to
-                expand to other under-served counties of the Upper Nile Region.
-              </p>
-
-              <div className={styles.note}>
-                <MapPin size={18} />
-                <p>
-                  We prioritize crisis-affected and underdeveloped areas where children face the
-                  highest risk of exclusion.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* VISION / MISSION / GOAL / AIM */}
-      <section className={styles.section}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
-            <h2 className={styles.sectionTitle}>Vision, Mission & Direction</h2>
-            <p className={styles.sectionSubtext}>
-              What we believe, what we do, and how we measure progress.
-            </p>
-          </div>
-
-          <div className={styles.pillGrid}>
-            <div className={`${styles.pillCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.pillIcon}>
-                <Globe size={22} />
-              </div>
-              <h3>Vision</h3>
-              <p>
-                “A South Sudan where every child grows up healthy, educated, protected, and
-                empowered—supported by resilient communities with access to peace, safe water,
-                livelihoods, and essential services.”
-              </p>
-            </div>
-
-            <div className={`${styles.pillCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.pillIcon}>
-                <Target size={22} />
-              </div>
-              <h3>Mission</h3>
-              <p>
-                To empower children and communities in South Sudan through education, improved
-                nutrition, safe water and sanitation, and protection services—enabling every child
-                to grow, learn, and thrive.
-              </p>
-            </div>
-
-            <div className={`${styles.pillCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.pillIcon}>
-                <Shield size={22} />
-              </div>
-              <h3>Strategic Goal</h3>
-              <p>
-                To strengthen community resilience and child development through integrated services
-                that ensure access to quality education, essential health and nutrition, child
-                protection, peace and conflict resolution, and timely humanitarian assistance.
-              </p>
-            </div>
-
-            <div className={`${styles.pillCard} ${styles.reveal}`} data-reveal="true">
-              <div className={styles.pillIcon}>
-                <Heart size={22} />
-              </div>
-              <h3>Aim</h3>
-              <p>
-                To promote the holistic well-being and development of children and their communities
-                in crisis-affected and underdeveloped areas—enabling them to survive, thrive, and
-                become agents of peace and change.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* VALUES */}
-      <section className={styles.sectionAlt}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
-            <h2 className={styles.sectionTitle}>Core Values</h2>
-            <p className={styles.sectionSubtext}>
-              The principles guiding our work with children, families, and communities.
-            </p>
-          </div>
-
-          <div className={styles.chipGrid}>
-            {coreValues.map((v, i) => (
-              <div
-                key={v}
-                className={`${styles.chip} ${styles.reveal}`}
-                data-reveal="true"
-                style={{ ['--d' as any]: `${i * 35}ms` }}
-              >
-                <span className={styles.chipDot} aria-hidden="true" />
-                {v}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* OBJECTIVES + AREAS OF FOCUS */}
-      <section className={styles.section}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
-            <h2 className={styles.sectionTitle}>Objectives & Areas of Focus</h2>
-            <p className={styles.sectionSubtext}>
-              Where we deliver services and how we build long-term resilience.
-            </p>
-          </div>
+      {/* THE CMDI STORY - Editorial Humanized Focus */}
+      <section className="py-20 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className={revealClass}>
+              <p className="text-sky-600 font-bold uppercase tracking-widest text-sm mb-3">Our Story</p>
+              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6 leading-tight">Led by the community, driven by compassion.</h3>
+              <p className="text-slate-600 leading-relaxed mb-6 text-lg">
+                In regions heavily affected by crisis and underdevelopment, children often face the highest risks of exclusion. CMDI was founded to bridge this gap. We are more than an organization; we are a community-driven response to ensure that vulnerability does not dictate a child's future.
+              </p>
+              <p className="text-slate-600 leading-relaxed text-lg mb-8">
+                Operating primarily in Fangak County, Jonglei State, we bring protection, inclusive education, and vital health services directly to the frontlines. As we look to the future, our goal is to expand this lifeline to other under-served areas across the Upper Nile Region.
+              </p>
+              
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { icon: Shield, text: 'Child Safeguarding' },
+                  { icon: Users, text: 'Community Ownership' },
+                  { icon: Heart, text: 'Holistic Care' }
+                ].map((tag, i) => (
+                  <span key={i} className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-800 text-sm font-semibold px-4 py-2 rounded-full shadow-sm">
+                    <tag.icon size={16} className="text-sky-600" /> {tag.text}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-          <div className={styles.splitGrid}>
-            <div className={`${styles.panel} ${styles.reveal}`} data-reveal="true">
-              <h3 className={styles.panelTitle}>Objectives</h3>
-              <div className={styles.objectives}>
-                {objectives.map((o) => (
-                  <div key={o.title} className={styles.objective}>
-                    <div className={styles.objectiveIcon}>{o.icon}</div>
-                    <div>
-                      <p className={styles.objectiveTitle}>{o.title}</p>
-                      <p className={styles.objectiveText}>{o.text}</p>
+            <div className={`${revealClass} bg-[#0c74a5] rounded-3xl p-8 lg:p-12 shadow-xl text-white relative overflow-hidden`} style={{ transitionDelay: '200ms' }}>
+              <div className="absolute -bottom-10 -right-10 opacity-10">
+                <Target size={250} />
+              </div>
+              <div className="relative z-10">
+                <h4 className="text-2xl font-bold mb-6">Our Core Values</h4>
+                <p className="text-sky-100 mb-8 leading-relaxed">
+                  These principles form the bedrock of every decision we make and every program we deliver in the field.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  {coreValues.map((v, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sky-50 font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-sky-300" />
+                      {v}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div
-              className={`${styles.panel} ${styles.reveal}`}
-              data-reveal="true"
-              style={{ ['--d' as any]: '120ms' }}
-            >
-              <h3 className={styles.panelTitle}>Areas of Focus</h3>
-              <ul className={styles.focusList}>
-                {areasOfFocus.map((a) => (
-                  <li key={a}>
-                    <span className={styles.bullet} aria-hidden="true" />
-                    {a}
-                  </li>
-                ))}
-              </ul>
-
-              <div className={styles.partnerNote}>
-                <Lightbulb size={18} />
-                <p>
-                  CMDI is mobilizing resources to implement its flagship “Learning for Life” program
-                  in Fangak County and is seeking strategic partners to support planning and
-                  co-design of education and child protection.
-                </p>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ORGANIZATION STRUCTURE */}
-      <section className={styles.sectionAlt}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
-            <h2 className={styles.sectionTitle}>Organization Structure</h2>
-            <p className={styles.sectionSubtext}>
-              A lean structure designed for accountability, delivery, and learning.
-            </p>
+      {/* STRATEGIC FRAMEWORK */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className={`${revealClass} text-center max-w-3xl mx-auto mb-16`}>
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight mb-4">Our Guiding Compass</h2>
+            <div className="w-20 h-1 bg-sky-500 mx-auto mb-6 rounded-full" />
+            <p className="text-lg text-slate-600">The vision and mission that define our humanitarian approach and keep us focused on what truly matters: the children.</p>
           </div>
 
-          <div className={styles.accordionGrid}>
-            {roles.map((role, idx) => (
-              <details
-                key={role.title}
-                className={`${styles.details} ${styles.reveal}`}
-                data-reveal="true"
-                style={{ ['--d' as any]: `${idx * 45}ms` }}
-              >
-                <summary className={styles.summary}>
-                  <span>{role.title}</span>
-                  <span className={styles.summaryHint}>View responsibilities</span>
-                </summary>
-                <ul className={styles.detailsList}>
-                  {role.responsibilities.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-              </details>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[
+              { title: 'Our Vision', icon: Globe, text: '“A South Sudan where every child grows up healthy, educated, protected, and empowered—supported by resilient communities with access to peace, safe water, livelihoods, and essential services.”' },
+              { title: 'Our Mission', icon: Target, text: 'To empower children and communities through education, improved nutrition, safe water and sanitation, and protection services—enabling every child to grow, learn, and thrive.' },
+            ].map((item, i) => (
+              <div key={i} className={`${revealClass} flex gap-6 p-8 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors`} style={{ transitionDelay: `${i * 100}ms` }}>
+                <div className="shrink-0">
+                  <div className="w-14 h-14 bg-white shadow-sm border border-slate-200 rounded-xl flex items-center justify-center text-[#0c74a5]">
+                    <item.icon size={28} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3">{item.title}</h3>
+                  <p className="text-slate-600 leading-relaxed text-lg">{item.text}</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* LEADERSHIP */}
-      <section className={styles.section}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHeader} ${styles.reveal}`} data-reveal="true">
-            <h2 className={styles.sectionTitle}>Leadership</h2>
-            <p className={styles.sectionSubtext}>
-              CMDI is led by professionals, local experts, and volunteers committed to dignity,
-              protection, and inclusion. Click a profile to view role responsibilities.
+      {/* ENHANCED PARTNERSHIPS & IMPACT */}
+      <section className="py-24 bg-slate-800 text-white border-y border-slate-700">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            
+            <div className={revealClass}>
+              <div className="flex items-center gap-3 text-sky-400 font-bold uppercase tracking-widest text-sm mb-4">
+                <Handshake size={20} /> Partnerships & Impact
+              </div>
+              <h2 className="text-3xl lg:text-4xl font-bold mb-6">Collective action for lasting change.</h2>
+              <p className="text-slate-300 leading-relaxed text-lg mb-6">
+                Complex humanitarian challenges cannot be solved in isolation. CMDI actively aligns with national frameworks, UN clusters, and international humanitarian standards to ensure our interventions are timely, effective, and free from duplication.
+              </p>
+              <p className="text-slate-300 leading-relaxed text-lg mb-8">
+                By forging strong alliances with local government agencies, international donors, and peer NGOs, we amplify our reach. Together, we are building systems that outlast our immediate interventions, focusing on long-term resilience and community self-reliance.
+              </p>
+
+              <Link href="/partners" className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold px-8 py-3.5 rounded-full transition-all">
+                Become a Strategic Partner <ArrowRight size={18} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {[
+                { icon: Users, stat: '500+', label: 'Vulnerable children and families directly supported.' },
+                { icon: Shield, stat: '100+', label: 'Community health workers trained in hygiene protocols.' },
+                { icon: Building2, stat: 'Local', label: 'Deeply integrated with grassroots leadership networks.' },
+                { icon: TrendingUp, stat: 'Scalable', label: 'Preparing to expand across the Upper Nile Region.' }
+              ].map((item, idx) => (
+                <div key={idx} className={`${revealClass} bg-slate-700/50 border border-slate-600 rounded-2xl p-6 hover:bg-slate-700 transition-colors`} style={{ transitionDelay: `${idx * 100}ms` }}>
+                  <item.icon size={32} className="text-sky-400 mb-4" />
+                  <h4 className="text-3xl font-bold text-white mb-2">{item.stat}</h4>
+                  <p className="text-slate-400 text-sm leading-relaxed">{item.label}</p>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* LEADERSHIP - Interactive Grid */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className={`${revealClass} text-center max-w-3xl mx-auto mb-16`}>
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight mb-4">Our Leadership Team</h2>
+            <div className="w-20 h-1 bg-sky-500 mx-auto mb-6 rounded-full" />
+            <p className="text-lg text-slate-600">
+              Guided by lived experience and professional expertise, our team is wholly committed to protecting dignity and championing inclusion.
             </p>
           </div>
 
-          <div className={styles.teamGrid}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {leadership.map((member, idx) => (
               <button
                 key={member.key}
                 type="button"
-                className={`${styles.teamCard} ${styles.reveal}`}
-                data-reveal="true"
-                style={{ ['--d' as any]: `${idx * 55}ms` }}
-                onClick={() => openModal(member.key)}
+                className={`${revealClass} text-left group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col`}
+                style={{ transitionDelay: `${idx * 100}ms` }}
+                onClick={() => setOpenKey(member.key)}
               >
-                <div className={styles.teamMedia} aria-hidden="true">
+                <div className="relative h-64 w-full bg-slate-200">
                   <Image
                     src={member.image}
-                    alt={`${member.name} portrait`}
+                    alt={member.name}
                     fill
-                    className={styles.teamImg}
-                    sizes="(max-width: 960px) 92vw, 360px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   />
                 </div>
-
-                <div className={styles.teamMeta}>
-                  <p className={styles.teamName}>{member.name}</p>
-                  <p className={styles.teamRole}>{member.title}</p>
-                  <p className={styles.teamHint}>
-                    View role details <ArrowRight size={16} />
+                <div className="p-6 flex-1 flex flex-col">
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">{member.name}</h3>
+                  <p className="text-sky-700 text-sm font-semibold mb-4 flex-1">{member.title}</p>
+                  <p className="text-slate-400 text-sm font-semibold inline-flex items-center gap-1 group-hover:text-sky-600 transition-colors mt-auto">
+                    View Profile <ArrowRight size={14} />
                   </p>
                 </div>
               </button>
             ))}
           </div>
         </div>
-
-        {/* MODAL */}
-        {activeMember && (
-          <div
-            className={styles.modalOverlay}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${activeMember.name} role details`}
-            onClick={closeModal}
-          >
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <button type="button" className={styles.modalClose} onClick={closeModal} aria-label="Close">
-                <X size={18} />
-              </button>
-
-              <div className={styles.modalHeader}>
-                <div className={styles.modalAvatar}>
-                  <Image src={activeMember.image} alt={activeMember.name} fill className={styles.teamImg} />
-                </div>
-
-                <div className={styles.modalTitleBlock}>
-                  <h3 className={styles.modalName}>{activeMember.name}</h3>
-                  <p className={styles.modalRole}>{activeMember.title}</p>
-                </div>
-              </div>
-
-              <p className={styles.modalBlurb}>{activeMember.blurb}</p>
-
-              <div className={styles.modalSection}>
-                <h4 className={styles.modalSectionTitle}>Key Responsibilities</h4>
-                <ul className={styles.modalList}>
-                  {activeMember.responsibilities.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className={styles.modalActions}>
-                <Link className={styles.btnPrimary} href="/contact" scroll onClick={closeModal}>
-                  Contact CMDI <ArrowRight size={18} />
-                </Link>
-                <Link className={styles.btnOutline} href="/partners" scroll onClick={closeModal}>
-                  Become a Partner <ArrowRight size={18} />
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
       </section>
 
-      {/* IMPACT + GET INVOLVED */}
-      <section className={styles.sectionAlt}>
-        <div className={styles.container}>
-          <div className={styles.bottomGrid}>
-            <div className={`${styles.card} ${styles.reveal}`} data-reveal="true">
-              <p className={styles.eyebrow}>Partnerships & Impact</p>
-              <h3 className={styles.cardTitle}>Working together for lasting change.</h3>
-              <p className={styles.cardText}>
-                CMDI collaborates with local communities, government agencies, international donors,
-                and like-minded NGOs to maximize impact and ensure long-term change. Since its
-                inception, CMDI has impacted over 500 children and families across South Sudan.
+      {/* GET INVOLVED / CONTACT BLOCK */}
+      <section className="bg-white border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-16 lg:py-24">
+          <div className="bg-[#071f2f] rounded-3xl p-8 lg:p-16 shadow-2xl flex flex-col lg:flex-row gap-12 items-center justify-between text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5"><Globe size={300} /></div>
+            
+            <div className="relative z-10 max-w-2xl">
+              <h3 className="text-3xl lg:text-4xl font-bold mb-4">Ready to make a difference?</h3>
+              <p className="text-slate-300 text-lg leading-relaxed mb-8">
+                Whether you want to fund a child's education, partner on a community project, or volunteer your skills, there is a place for you in our mission.
               </p>
-
-              <div className={styles.achievement}>
-                <BadgeCheck size={18} />
-                <div>
-                  <p className={styles.achievementTitle}>Major Achievement</p>
-                  <p className={styles.achievementText}>
-                    Trained 100 community health workers on hygiene and sanitation.
-                  </p>
-                </div>
+              <div className="flex flex-wrap gap-4">
+                <Link href="/donate" className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-8 rounded-full transition-colors flex items-center gap-2">
+                  Donate Today
+                </Link>
+                <Link href="/contact" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-8 rounded-full transition-colors">
+                  Contact Us
+                </Link>
               </div>
             </div>
 
-            <div
-              className={`${styles.card} ${styles.reveal}`}
-              data-reveal="true"
-              style={{ ['--d' as any]: '120ms' }}
-            >
-              <p className={styles.eyebrow}>Get Involved</p>
-              <h3 className={styles.cardTitle}>Donate. Partner. Volunteer.</h3>
-              <p className={styles.cardText}>
-                Whether through volunteering, partnerships, or donations, there are many ways you
-                can support our mission. Join us in creating a better world for children.
-              </p>
-
-              <div className={styles.ctaRow}>
-                <Link href="/donate" className={styles.btnPrimary} scroll>
-                  Donate <ArrowRight size={18} />
-                </Link>
-                <Link href="/partners" className={styles.btnOutline} scroll>
-                  Partner <ArrowRight size={18} />
-                </Link>
-              </div>
-
-              <div className={styles.contactBox}>
-                <div className={styles.contactLine}>
-                  <Users size={18} />
-                  <div>
-                    <p className={styles.contactTitle}>Contact Person</p>
-                    <p className={styles.contactText}>
-                      Jal Bhap Biel — Founder & Executive Director
-                    </p>
-                  </div>
+            <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 w-full lg:w-auto min-w-[300px]">
+              <h4 className="font-bold text-lg mb-6 flex items-center gap-2 border-b border-white/20 pb-4">
+                <Mail size={20} className="text-sky-400" /> Direct Inquiries
+              </h4>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-slate-400 uppercase tracking-wider font-semibold mb-1">Executive Director</p>
+                  <p className="font-medium">Jal Bhap Biel</p>
                 </div>
-
-                <div className={styles.contactLine}>
-                  <Mail size={18} />
-                  <p className={styles.contactText}>jalbhap@gmail.com</p>
+                <div className="flex items-center gap-3">
+                  <Mail size={18} className="text-slate-400" /> 
+                  <a href="mailto:jalbhap@gmail.com" className="hover:text-sky-400 transition-colors">jalbhap@gmail.com</a>
                 </div>
-
-                <div className={styles.contactLine}>
-                  <Phone size={18} />
-                  <p className={styles.contactText}>+211 929 045 655</p>
+                <div className="flex items-center gap-3">
+                  <Phone size={18} className="text-slate-400" /> 
+                  <span>+211 929 045 655</span>
                 </div>
               </div>
-
-              <p className={styles.smallNote}>
-                Website: <span className={styles.mono}>www.cmd-ss.org</span>
-              </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* LEADERSHIP MODAL */}
+      {activeMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm transition-opacity">
+          <div 
+            className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-100 p-6 flex items-start justify-between z-10">
+              <div className="flex items-center gap-5">
+                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-slate-100 shrink-0">
+                  <Image src={activeMember.image} alt={activeMember.name} fill className="object-cover" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">{activeMember.name}</h3>
+                  <p className="text-sky-600 font-semibold">{activeMember.title}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setOpenKey(null)} 
+                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors shrink-0"
+                aria-label="Close modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 sm:p-8">
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-8">
+                <p className="text-slate-700 text-lg leading-relaxed">{activeMember.blurb}</p>
+              </div>
+
+              <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Target size={20} className="text-sky-500" /> Key Focus Areas
+              </h4>
+              <ul className="space-y-3 mb-10">
+                {activeMember.responsibilities.map((r, i) => (
+                  <li key={i} className="flex items-start gap-3 text-slate-600 bg-white border border-slate-100 p-4 rounded-xl shadow-sm">
+                    <span className="mt-1 w-2 h-2 bg-sky-400 rounded-full shrink-0" />
+                    <span className="leading-relaxed">{r}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap gap-4 pt-6 border-t border-slate-100">
+                <Link href="/contact" onClick={() => setOpenKey(null)} className="flex-1 text-center bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition-colors">
+                  Contact CMDI
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
